@@ -14,21 +14,19 @@ from toolchemy.utils.logger import get_logger
 
 
 class MLFlowTracker(TrackerBase):
-    def __init__(self, tracking_uri: str, experiment_name: str, with_artifact_logging=True,
+    def __init__(self, tracking_uri: str, experiment_name: str, with_artifact_logging=True, registry_uri: str | None = None,
                  tracking_client: MlflowClient | None = None):
         super().__init__(experiment_name, with_artifact_logging)
-        self._tracking_client = None
+        self._client = None
         self._active_run = None
         self._active_run_id = None
         self._experiment_id = None
         self._reset_run()
 
         if tracking_client:
-            self._tracking_client = tracking_client
+            self._client = tracking_client
         else:
-            self._tracking_client = self._build_tracking_client(tracking_uri)
-
-        mlflow.set_tracking_uri(tracking_uri)
+            self._client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri, registry_uri=registry_uri)
 
         logger = get_logger()
         logger.info(f"Mlflow tracker created")
@@ -67,25 +65,25 @@ class MLFlowTracker(TrackerBase):
 
         tags = resolve_tags(user_specified_tags)
 
-        experiment = self._tracking_client.get_experiment_by_name(self._experiment_name)
+        experiment = self._client.get_experiment_by_name(self._experiment_name)
         if experiment:
             experiment_comment_msg = "(already exists)"
             self._logger.debug(f"Experiment '{self._experiment_name}' already exists")
             self._experiment_id = experiment.experiment_id
             if experiment.lifecycle_stage == "deleted":
                 self._logger.info(f"Restoring deleted experiment")
-                self._tracking_client.restore_experiment(self._experiment_id)
+                self._client.restore_experiment(self._experiment_id)
         else:
             experiment_comment_msg = "(does not exist, creating a new one)"
             self._logger.debug(f"Experiment '{self._experiment_name}' does not exist, creating a new one")
-            self._experiment_id = self._tracking_client.create_experiment(self._experiment_name)
+            self._experiment_id = self._client.create_experiment(self._experiment_name)
 
         self._logger.info(f"Starting the experiment tracking")
         self._logger.info(f"> experiment name: {self._experiment_name} {experiment_comment_msg}")
         self._logger.info(f"> experiment id: {self._experiment_id}")
         self._logger.info(f"> run name: {run_name}")
 
-        self._active_run = self._tracking_client.create_run(
+        self._active_run = self._client.create_run(
             experiment_id=self._experiment_id,
             start_time=None,
             run_name=run_name,
@@ -98,7 +96,7 @@ class MLFlowTracker(TrackerBase):
             return
 
         status = RunStatus.to_string(RunStatus.FINISHED)
-        self._tracking_client.set_terminated(self._active_run_id, status)
+        self._client.set_terminated(self._active_run_id, status)
         self._reset_run()
 
     def log(self, name: str, value: Any):
@@ -106,7 +104,7 @@ class MLFlowTracker(TrackerBase):
             return
 
         if isinstance(value, dict):
-            self._tracking_client.log_dict(self._active_run_id, value, f"{name}.json")
+            self._client.log_dict(self._active_run_id, value, f"{name}.json")
 
         raise ValueError(f"Unsupported logged object type: {type(value)}")
 
@@ -115,7 +113,7 @@ class MLFlowTracker(TrackerBase):
             return
 
         self._store_param(name, value)
-        self._tracking_client.log_param(self._active_run_id, name, value)
+        self._client.log_param(self._active_run_id, name, value)
 
     def log_params(self, params: Dict[str, Any]):
         if self._disabled:
@@ -130,16 +128,16 @@ class MLFlowTracker(TrackerBase):
                 params_to_store.append(Param(key, str(value)))
             self._store_param(key, value)
 
-        self._tracking_client.log_batch(self._active_run_id, [], params_to_store)
+        self._client.log_batch(self._active_run_id, [], params_to_store)
 
     def log_text(self, name: str, value: str):
         if self._disabled:
             return
         try:
-            self._tracking_client.log_text(run_id=self._active_run_id, text=value, artifact_file=name)
+            self._client.log_text(run_id=self._active_run_id, text=value, artifact_file=name)
         except MlflowException as e:
             self._logger.error(f"An error occurred during text logging: {e}")
-            self._logger.error(f"> tracking uri: {self._tracking_client.tracking_uri}")
+            self._logger.error(f"> tracking uri: {self._client.tracking_uri}")
             self._logger.error(f"> artifact uri: {self._active_run.info.artifact_uri}")
             raise e
 
@@ -148,7 +146,7 @@ class MLFlowTracker(TrackerBase):
             return
 
         metric_value = self._store_metric(name, value, metric_metadata)
-        self._tracking_client.log_metric(self._active_run_id, name, metric_value, step)
+        self._client.log_metric(self._active_run_id, name, metric_value, step)
 
     def log_metrics(self, metrics: Dict[str, float | list], step: Optional[int] = None):
         if self._disabled:
@@ -165,32 +163,27 @@ class MLFlowTracker(TrackerBase):
                 metric_value = self._store_metric(k, value)
                 metrics_to_store.append(Metric(k, metric_value, timestamp, step or 0))
 
-        self._tracking_client.log_batch(self._active_run_id, metrics_to_store)
+        self._client.log_batch(self._active_run_id, metrics_to_store)
 
     def log_artifact(self, artifact_path: str, save_dir: str = None):
         if self._disabled:
             return
 
         if self._artifact_logging:
-            self._tracking_client.log_artifact(self._active_run_id, artifact_path, save_dir)
+            self._client.log_artifact(self._active_run_id, artifact_path, save_dir)
 
     def log_figure(self, figure, save_path: str):
         if self._disabled:
             return
-        self._tracking_client.log_figure(self._active_run_id, figure, save_path)
+        self._client.log_figure(self._active_run_id, figure, save_path)
 
     def set_run_tag(self, name: str, value: str | int | float):
         self._store_tag(name, value, run_name=self.run_name)
-        self._tracking_client.set_tag(self._active_run_id, name, value)
+        self._client.set_tag(self._active_run_id, name, value)
 
     def set_experiment_tag(self, name: str, value: str | int | float):
         self._store_tag(name, value)
-        self._tracking_client.set_experiment_tag(self._experiment_id, name, value)
-
-    @staticmethod
-    def _build_tracking_client(tracking_uri: str) -> MlflowClient:
-        tracking_client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri, registry_uri=tracking_uri)
-        return tracking_client
+        self._client.set_experiment_tag(self._experiment_id, name, value)
 
     def _reset_run(self):
         self._active_run = None

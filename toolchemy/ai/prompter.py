@@ -67,8 +67,8 @@ class PrompterMLflow(PrompterBase):
 
         self._registry_store_uri = f"sqlite:///{registry_store_dir}/registry.db"
         self._tracking_uri = f"sqlite:///{registry_store_dir}/tracking.db"
-        mlflow.set_tracking_uri(self._tracking_uri)
-        mlflow.set_registry_uri(self._registry_store_uri)
+
+        self._client = mlflow.tracking.MlflowClient(tracking_uri=self._tracking_uri, registry_uri=self._registry_store_uri)
 
         self._logger.info(f"Prompter-MLflow initialized")
         self._logger.info(f"> tracking store uri: {self._tracking_uri}")
@@ -79,11 +79,12 @@ class PrompterMLflow(PrompterBase):
 
         cache_key = self._cacher.create_cache_key(["prompt_render", prompt_uri], [variables])
         if self._cacher.exists(cache_key):
+            self._logger.debug(f"Retrieving from the cache")
             return self._cacher.get(cache_key)
 
         self._logger.debug(f"Rendering prompt: '{name}' (version: '{version}') -> prompt uri: '{prompt_uri}'")
 
-        prompt_template = mlflow.genai.load_prompt(prompt_uri)
+        prompt_template = self._client.load_prompt(prompt_uri)
         prompt = prompt_template.format(**variables)
 
         self._cacher.set(cache_key, prompt)
@@ -99,16 +100,16 @@ class PrompterMLflow(PrompterBase):
 
         self._logger.debug(f"Getting prompt template: '{name}' (version: '{version}') -> prompt uri: '{prompt_uri}'")
 
-        prompt_template = mlflow.genai.load_prompt(prompt_uri)
+        prompt_template = self._client.load_prompt(prompt_uri)
 
         self._cacher.set(cache_key, prompt_template.template)
 
         return prompt_template.template
 
     def create_template(self, name: str, template: str, overwrite: bool = False):
-        if mlflow.genai.load_prompt(name_or_uri=name, allow_missing=True) and not overwrite:
+        if self._client.load_prompt(name_or_uri=name, allow_missing=True) and not overwrite:
             return
-        mlflow.genai.register_prompt(name=name, template=template)
+        self._client.register_prompt(name=name, template=template)
 
     def _build_prompt_uri(self, name: str, version: str | int | None = None) -> str:
         prompt_version = self._prompt_version(name, version_mapping=version)
@@ -122,3 +123,15 @@ class PrompterMLflow(PrompterBase):
 
     def _latest_value(self) -> str | None:
         return "latest"
+
+
+def testing():
+    import logging
+    locations = Locations()
+    prompter = PrompterMLflow(registry_store_dir=locations.in_resources("tests/prompts_mlflow"), log_level=logging.DEBUG)
+    p = prompter.render("create_model_task_prompt")
+    print(p)
+
+
+if __name__ == "__main__":
+    testing()

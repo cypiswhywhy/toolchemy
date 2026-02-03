@@ -13,7 +13,7 @@ def prompter():
     prompt_template_1 = "Yolo! I say {{foo}}, you say {{bar}}. First version."
     prompt_template_2 = "Yolo! I say {{foo}}, you say {{bar}}. Second version."
 
-    prompter.create_template("test_prompt", prompt_template_1, overwrite=True)
-    prompter.create_template("test_prompt", prompt_template_2, overwrite=True)
+    prompter.create_template("test_prompt", prompt_template_1, overwrite=False)
+    prompter.create_template("test_prompt", prompt_template_2, overwrite=False)
 
     return prompter

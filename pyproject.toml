@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "toolchemy"
-version = "0.2.186"
+version = "0.2.187"
 description = "a set of auxiliary programming tools"
 authors = ["Cyprian Nosek <cyprian.nosek@protonmail.com>"]
 

@@ -196,7 +196,7 @@ class MLFlowTracker(TrackerBase):
         self._store_tag(name, value)
         self._client.set_experiment_tag(self._experiment_id, name, value)
 
-    def get_traces(self, filter_name: str | None = None) -> pd.DataFrame:
+    def get_traces(self, filter_name: str | None = None) -> DataFrame:
         filter_string = None
         if filter_name:
             filter_string = f"trace.name = '{filter_name}'"

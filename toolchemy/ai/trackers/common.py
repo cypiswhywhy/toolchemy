@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import statistics
+from pandas import DataFrame
 from typing import Dict, Any
 
 from toolchemy.utils.logger import get_logger
@@ -94,7 +95,7 @@ class ITracker(ABC):
         pass
 
     @abstractmethod
-    def get_traces(self, filter_name: str | None = None):
+    def get_traces(self, filter_name: str | None = None) -> DataFrame:
         pass
 
 
@@ -117,7 +118,7 @@ class TrackerBase(ITracker, ABC):
 
     @property
     def experiment_id(self) -> str:
-        return self._experiment_name
+        return self._experiment_named
 
     def get_max_metric_value(self, name: str) -> float:
         return max(self._metrics[name], key=lambda el: el['value'])
@@ -136,7 +137,7 @@ class TrackerBase(ITracker, ABC):
             "tags": self._tags.copy(),
         }
 
-    def get_traces(self, filter_name: str | None = None):
+    def get_traces(self, filter_name: str | None = None) -> DataFrame:
         raise NotImplementedError()
 
     def _store_param(self, name: str, value: Any):

@@ -7,8 +7,9 @@ from mlflow.client import MlflowClient
 from mlflow.entities import RunStatus, Metric, Param
 from mlflow.tracking.context.registry import resolve_tags
 from mlflow.utils.mlflow_tags import MLFLOW_PARENT_RUN_ID, MLFLOW_RUN_NAME
+from mlflow.tracing.utils.search import traces_to_df
 from mlflow import MlflowException
-
+from pandas import DataFrame
 from toolchemy.ai.trackers.common import TrackerBase
 from toolchemy.utils.logger import get_logger
 
@@ -195,11 +196,11 @@ class MLFlowTracker(TrackerBase):
         self._store_tag(name, value)
         self._client.set_experiment_tag(self._experiment_id, name, value)
 
-    def get_traces(self, filter_name: str | None = None):
+    def get_traces(self, filter_name: str | None = None) -> pd.DataFrame:
         filter_string = None
         if filter_name:
             filter_string = f"trace.name = '{filter_name}'"
-        return self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string)
+        return traces_to_df(self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string))
 
     def _reset_run(self):
         self._active_run = None

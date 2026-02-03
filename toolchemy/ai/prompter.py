@@ -27,8 +27,8 @@ class IPrompter(ABC):
         pass
 
 
-def run_studio():
-    prompter = PrompterMLflow()
+def run_studio(registry_path: str | None = None):
+    prompter = PrompterMLflow(registry_store_dir=registry_path)
     prompter.run_studio()
 
 

@@ -195,6 +195,12 @@ class MLFlowTracker(TrackerBase):
         self._store_tag(name, value)
         self._client.set_experiment_tag(self._experiment_id, name, value)
 
+    def get_traces(self, filter_name: str | None = None):
+        filter_string = None
+        if filter_name:
+            filter_string = f"trace.name = '{filter_name}'"
+        return self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string)
+
     def _reset_run(self):
         self._active_run = None
         self._active_run_id = None

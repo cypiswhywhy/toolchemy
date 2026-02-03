@@ -93,6 +93,10 @@ class ITracker(ABC):
     def get_data(self) -> dict:
         pass
 
+    @abstractmethod
+    def get_traces(self, filter_name: str | None = None):
+        pass
+
 
 class TrackerBase(ITracker, ABC):
     def __init__(self, experiment_name: str, with_artifact_logging: bool = True, disabled: bool = False):
@@ -131,6 +135,9 @@ class TrackerBase(ITracker, ABC):
             "params": self._params.copy(),
             "tags": self._tags.copy(),
         }
+
+    def get_traces(self, filter_name: str | None = None):
+        raise NotImplementedError()
 
     def _store_param(self, name: str, value: Any):
         if self._disabled:

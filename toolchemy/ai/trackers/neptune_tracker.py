@@ -20,6 +20,10 @@ class NeptuneAITracker(TrackerBase):
             raise RuntimeError("There is no active run!")
         return self._active_run_id
 
+    @property
+    def run_id(self) -> str:
+        return self.run_name
+
 
     def start_run(
             self, run_id: str = None,

@@ -13,7 +13,17 @@ class ITracker(ABC):
 
     @property
     @abstractmethod
+    def experiment_id(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
     def run_name(self) -> str:
+        pass
+
+    @property
+    @abstractmethod
+    def run_id(self) -> str:
         pass
 
     @abstractmethod
@@ -101,6 +111,10 @@ class TrackerBase(ITracker, ABC):
     def experiment_name(self) -> str:
         return self._experiment_name
 
+    @property
+    def experiment_id(self) -> str:
+        return self._experiment_name
+
     def get_max_metric_value(self, name: str) -> float:
         return max(self._metrics[name], key=lambda el: el['value'])
 
@@ -164,6 +178,10 @@ class InMemoryTracker(TrackerBase):
 
     @property
     def run_name(self) -> str:
+        return self._run_name
+
+    @property
+    def run_id(self) -> str:
         return self._run_name
 
     def start_run(

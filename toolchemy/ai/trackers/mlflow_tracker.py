@@ -39,6 +39,16 @@ class MLFlowTracker(TrackerBase):
             raise RuntimeError("There is no active run!")
         return self._active_run.info.run_name
 
+    @property
+    def run_id(self) -> str:
+        if not self._active_run:
+            raise RuntimeError("There is no active run!")
+        return self._active_run.info.run_id
+
+    @property
+    def experiment_id(self) -> str:
+        return self._experiment_id
+
     def start_run(
             self, run_id: str = None,
             run_name: str = None,

@@ -86,12 +86,12 @@ class ILLMClient(ABC):
         pass
 
     @abstractmethod
-    def completion(self, prompt: str, model_config: ModelConfig | None = None, images_base64: list[str] | None = None,
+    def completion(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None, images_base64: list[str] | None = None,
                    no_cache: bool = False, cache_only: bool = False) -> str:
         pass
 
     @abstractmethod
-    def completion_json(self, prompt: str, model_config: ModelConfig | None = None, images_base64: list[str] | None = None, validation_schema: dict | None = None,
+    def completion_json(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None, images_base64: list[str] | None = None, validation_schema: dict | None = None,
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
         pass
 
@@ -254,14 +254,15 @@ Malformed JSON object:
         self._cacher.unset(cache_key_json)
         self._cacher.unset(cache_key_usage_json)
 
-    def completion_json(self, prompt: str, model_config: ModelConfig | None = None,
+    def completion_json(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None,
                         images_base64: list[str] | None = None, validation_schema: dict | None = None,
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
         model_cfg = self.model_config(model_config, self._model_name)
+        system_prompt = system_prompt or self._system_prompt
         self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
         self._logger.debug(f"> Model config (mod): model: {model_cfg.model_name}, max_new_tokens: {model_cfg.max_new_tokens}, temp: {model_cfg.temperature}")
 
-        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=self._system_prompt, prompt=prompt,
+        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
                                                                  model_config=model_cfg, images_base64=images_base64,
                                                                  is_json=True)
         if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
@@ -276,7 +277,7 @@ Malformed JSON object:
 
         self._logger.debug(f"Cache for completion_json does not exists, generating new response")
 
-        response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=self._system_prompt,
+        response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
                                              model_config=model_cfg,
                                              images_base64=images_base64,
                                              validation_schema=validation_schema)
@@ -345,12 +346,13 @@ Malformed JSON object:
 
         return parsed_data
 
-    def completion(self, prompt: str, model_config: ModelConfig | None = None,
+    def completion(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None,
                    images_base64: list[str] | None = None, no_cache: bool = False, cache_only: bool = False) -> str:
         model_config = self.model_config(model_config, self._model_name)
+        system_prompt = system_prompt or self._system_prompt
         self._logger.debug(f"Completion started (model: {model_config.model_name})")
 
-        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=self._system_prompt, prompt=prompt,
+        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
                                                                  model_config=model_config, images_base64=images_base64,
                                                                  is_json=False)
         if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
@@ -363,7 +365,7 @@ Malformed JSON object:
         if cache_only:
             raise LLMCacheDoesNotExist()
 
-        response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=self._system_prompt,
+        response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
                                         model_config=model_config,
                                         images_base64=images_base64)
         self._usages.append(usage)
@@ -414,16 +416,3 @@ def prepare_chat_messages(prompt: str, system_prompt: str | None = None, images_
         return ChatMessages(messages=messages_all)
 
     return messages_all
-
-
-def testing():
-    from toolchemy.utils.locations import Locations
-    locations = Locations()
-    data_path = locations.in_resources("tests/ai/malformed.json")
-    data_str = locations.read_content(data_path)
-
-    data = LLMClientBase._decode_json(data_str)
-
-
-if __name__ == "__main__":
-    testing()

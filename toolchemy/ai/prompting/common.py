@@ -47,5 +47,5 @@ class PrompterBase(IPrompter, ABC):
 
 class IPromptOptimizer(ABC):
     @abstractmethod
-    def refactor_prompt(self, system_prompt: str, user_prompt: str, model_name: str) -> tuple[str, str]:
+    def refactor_prompt(self, system_prompt: str, user_prompt: str, target_model_name: str) -> tuple[str, str]:
         pass

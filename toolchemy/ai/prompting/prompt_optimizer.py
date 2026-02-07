@@ -1,8 +1,8 @@
 from toolchemy.ai.clients.common import ILLMClient
-from toolchemy.ai.prompting.common import IPrompter
+from toolchemy.ai.prompting.common import IPrompter, IPromptOptimizer
 
 
-class PromptOptimizer:
+class PromptOptimizer(IPromptOptimizer):
     def __init__(self, llm: ILLMClient, prompter: IPrompter):
         self._llm = llm
         self._prompter = prompter

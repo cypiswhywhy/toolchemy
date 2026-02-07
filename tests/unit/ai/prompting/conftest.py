@@ -1,6 +1,6 @@
 import pytest
 
-from toolchemy.ai.prompter import PrompterMLflow
+from toolchemy.ai.prompting.prompter import PrompterMLflow
 from toolchemy.utils import DummyCacher, Locations
 
 

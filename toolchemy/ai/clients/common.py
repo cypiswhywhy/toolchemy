@@ -277,10 +277,16 @@ Malformed JSON object:
 
         self._logger.debug(f"Cache for completion_json does not exists, generating new response")
 
-        response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
-                                             model_config=model_cfg,
-                                             images_base64=images_base64,
-                                             validation_schema=validation_schema)
+        try:
+            response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
+                                                 model_config=model_cfg,
+                                                 images_base64=images_base64,
+                                                 validation_schema=validation_schema)
+        except Exception:
+            self._logger.error(f"> system prompt: {system_prompt}")
+            self._logger.error(f"> prompt: {prompt}")
+            self._logger.error(f"> model config: {model_config.raw()}")
+            raise
         self._usages.append(usage)
 
         if not no_cache:
@@ -365,9 +371,16 @@ Malformed JSON object:
         if cache_only:
             raise LLMCacheDoesNotExist()
 
-        response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
+        try:
+            response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
                                         model_config=model_config,
                                         images_base64=images_base64)
+        except Exception:
+            self._logger.error(f"> system prompt: {system_prompt}")
+            self._logger.error(f"> prompt: {prompt}")
+            self._logger.error(f"> model config: {model_config.raw()}")
+            raise
+
         self._usages.append(usage)
 
         if not no_cache:

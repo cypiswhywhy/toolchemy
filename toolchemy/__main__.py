@@ -1,6 +1,6 @@
 import click
 
-from toolchemy.ai.prompter import run_studio
+from toolchemy.ai.prompting.prompter_mlflow import run_studio
 
 
 @click.group(context_settings=dict(allow_interspersed_args=False))

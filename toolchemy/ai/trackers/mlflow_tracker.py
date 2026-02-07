@@ -209,7 +209,7 @@ class MLFlowTracker(TrackerBase):
 
 def play():
     from toolchemy.utils.datestimes import current_datetime_str
-    from toolchemy.ai.prompter import PrompterMLflow
+    from toolchemy.ai.prompting.prompter_mlflow import PrompterMLflow
     from toolchemy.utils import Locations
 
     locations = Locations()

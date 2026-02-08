@@ -40,3 +40,11 @@ def test_info_short_module_name(capsys):
     captured_msg = captured.err.strip()
 
     assert captured_msg == expected_msg
+
+
+def test_name_when_in_parent():
+    from toolchemy.ai.trackers.in_memory_tracker import InMemoryTracker
+
+    tracker = InMemoryTracker()
+
+    assert tracker._logger.name == "toolchemy.ai.trackers.in_memory_tracker"

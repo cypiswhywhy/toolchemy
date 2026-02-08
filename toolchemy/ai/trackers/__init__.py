@@ -1,4 +1,5 @@
-from .common import ITracker, InMemoryTracker
+from .common import ITracker
+from .in_memory_tracker import InMemoryTracker
 from .mlflow_tracker import MLFlowTracker
 from .neptune_tracker import NeptuneAITracker
 

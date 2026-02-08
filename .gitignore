@@ -1,1 +1,2 @@
 /.cache
+resources/tests/prompts_mlflow/registry.db

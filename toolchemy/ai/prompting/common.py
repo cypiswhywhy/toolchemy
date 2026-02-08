@@ -1,6 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from jinja2 import Template
 from toolchemy.utils.cacher import Cacher, ICacher
 from toolchemy.utils.logger import get_logger
 
@@ -16,22 +17,34 @@ class Prompt:
     template_system: str | None = None
     template_user: str | None = None
 
-    def render_user(self, **variables) -> "Prompt":
-        if not self.template_user:
+    def format(self, render_user: bool = True, render_system: bool = True, **variables) -> "Prompt":
+        if render_user and not self.template_user:
             raise InvalidPromptError("missing user template")
-        return Prompt(system=self.system, user=self._prep_template(self.template_user).format(**variables),
+        if render_system and  not self.template_system:
+            raise InvalidPromptError("missing system template")
+
+        return Prompt(system=self._format_template(self.template_system, **variables),
+                      user=self._format_template(self.template_user, **variables),
                       template_system=self.template_system, template_user=self.template_user)
 
-    def render_system(self, **variables) -> "Prompt":
+    def format_user(self, **variables) -> "Prompt":
+        if not self.template_user:
+            raise InvalidPromptError("missing user template")
+
+        return Prompt(system=self.system, user=self._format_template(self.template_user, **variables),
+                      template_system=self.template_system, template_user=self.template_user)
+
+    def format_system(self, **variables) -> "Prompt":
         if not self.template_system:
             raise InvalidPromptError("missing system template")
-        return Prompt(system=self._prep_template(self.template_system).format(**variables), user=self.user, template_system=self.template_system,
+        return Prompt(system=self._format_template(self.template_system, **variables), user=self.user, template_system=self.template_system,
                       template_user=self.template_user)
 
-    def _prep_template(self, template: str | None) -> str | None:
+    def _format_template(self, template: str | None, **variables) -> str | None:
         if template is None:
             return None
-        return template.replace("{{", "{").replace("}}", "}")
+        t = Template(template)
+        return t.render(**variables)
 
     def json(self) -> dict:
         return {

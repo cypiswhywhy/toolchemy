@@ -91,7 +91,8 @@ class ILLMClient(ABC):
         pass
 
     @abstractmethod
-    def completion_json(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None, images_base64: list[str] | None = None, validation_schema: dict | None = None,
+    def completion_json(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None, images_base64: list[str] | None = None,
+                        validation_schema: dict | None = None,
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
         pass
 

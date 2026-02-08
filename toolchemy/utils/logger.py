@@ -7,7 +7,10 @@ from toolchemy.utils.utils import _caller_module_name
 
 def get_logger(name: str | None = None, level: int = logging.INFO, log_dir: str | None = None, with_time: bool = True,
                with_module_name: bool = True, with_log_level: bool = True, short_module_name: bool = False, say_hi: bool = False) -> logging.Logger:
-    name = name or _caller_module_name()
+    name = name or _caller_module_name(offset=2)
+    if name.endswith(".common"):
+        # I'm sorry ;)
+        name = _caller_module_name(offset=3)
 
     datetime_format = "%H:%M:%S"
     prompts_parts = []

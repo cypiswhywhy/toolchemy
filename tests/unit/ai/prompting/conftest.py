@@ -10,7 +10,7 @@ def prompter():
     locations = Locations()
     cacher = DummyCacher(with_memory_store=True)
     prompter = PrompterMLflow(registry_store_dir=locations.in_resources("tests/prompts_mlflow"), cacher=cacher, log_level=logging.DEBUG)
-
+    overwrite = True
 
     user_template_1_v1 = "Yolo! I say {{foo}}, you say {{bar}}. First version."
     user_template_1_v2 = "Yolo! I say {{foo}}, you say {{bar}}. Second version."
@@ -25,11 +25,11 @@ def prompter():
     prompter.delete("test_prompt")
     prompter.delete("test_prompt_2")
     prompter.delete("test_prompt_3")
-    prompter.create_template("test_prompt", user_template_1_v1, overwrite=True)
-    prompter.create_template("test_prompt", user_template_1_v2, overwrite=True)
-    prompter.create_template("test_prompt_2", user_template_2_v1, system_template_2_v1, overwrite=True)
-    prompter.create_template("test_prompt_2", user_template_2_v2, system_template_2_v2, overwrite=True)
-    prompter.create_template("test_prompt_3", user_template_3_v1, overwrite=True)
-    prompter.create_template("test_prompt_3", user_template_3_v2, system_template_3_v1, overwrite=True)
+    prompter.create_template("test_prompt", user_template_1_v1, overwrite=overwrite)
+    prompter.create_template("test_prompt", user_template_1_v2, overwrite=overwrite)
+    prompter.create_template("test_prompt_2", user_template_2_v1, system_template_2_v1, overwrite=overwrite)
+    prompter.create_template("test_prompt_2", user_template_2_v2, system_template_2_v2, overwrite=overwrite)
+    prompter.create_template("test_prompt_3", user_template_3_v1, overwrite=overwrite)
+    prompter.create_template("test_prompt_3", user_template_3_v2, system_template_3_v1, overwrite=overwrite)
 
     return prompter

@@ -24,6 +24,8 @@ from toolchemy.utils.cacher import BaseCacher, CacherPickle, CacherDiskcache, Ca
     (["with none", None], [], False, "with_none_None"),
     (["with int", 13], [], False, "with_int_13"),
     (["with hashed int"], [13], False, f"with_hashed_int_{BaseCacher.hash("13")}"),
+    ({"plain": "as dict"}, [13], False, f"plain_as_dict_{BaseCacher.hash("13")}"),
+    ("hashed_as_dict", {"hashed": "as", "dict": 13}, False, f"hashed_as_dict_{BaseCacher.hash("hashed_as")}_{BaseCacher.hash("dict_13")}"),
 ])
 @patch("toolchemy.utils.cacher.common.current_date_str", return_value="20250613")
 def test_create_cache_key(_, parts_plain, parts_hashed, with_current_date, expected_key):

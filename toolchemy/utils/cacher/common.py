@@ -27,33 +27,39 @@ class ICacher(abc.ABC):
     Cacher interface
     """
 
-    @abc.abstractmethod
+    @abstractmethod
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
         pass
 
-    @abc.abstractmethod
+    @abstractmethod
     def exists(self, name: str) -> bool:
         """
         Checks if there is a cache entry for a given name
         """
 
-    @abc.abstractmethod
+    @abstractmethod
     def set(self, name: str, content: Any, ttl_s: int | None = None):
         """
         Dumps a given object under a given cache entry name. The object must be pickleable.
         """
 
-    @abc.abstractmethod
+    @abstractmethod
     def unset(self, name: str):
         """
         Removes a cache entry for a given name
         """
 
-    @abc.abstractmethod
+    @abstractmethod
     def get(self, name: str) -> Any:
         """
         Loads an object for a given cache entry name. If it doesn't exist, an exception is thrown.
         """
+
+    @staticmethod
+    @abstractmethod
+    def create_cache_key(parts_plain: list | dict | str | None = None, parts_hashed: list | dict | str | None = None,
+                         with_current_date: bool = False) -> str:
+        pass
 
     @property
     @abstractmethod
@@ -99,7 +105,7 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
         return hash_object.hexdigest()
 
     @staticmethod
-    def create_cache_key(parts_plain: list | str | None = None, parts_hashed: list | str | None = None,
+    def create_cache_key(parts_plain: list | dict | str | None = None, parts_hashed: list | dict | str | None = None,
                          with_current_date: bool = False) -> str:
         replaceable_chars = "*.,'\"|<>[]?!-:;()@#$%^&{} "
         if parts_plain is None and parts_hashed is None:
@@ -110,8 +116,12 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
             parts_hashed = []
         if isinstance(parts_plain, str):
             parts_plain = [parts_plain]
+        if isinstance(parts_plain, dict):
+            parts_plain = [f"{k}_{v}" for k, v in parts_plain.items()]
         if isinstance(parts_hashed, str):
             parts_hashed = [parts_hashed]
+        if isinstance(parts_hashed, dict):
+            parts_hashed = [f"{k}_{v}" for k, v in parts_hashed.items()]
 
         for i, part_plain in enumerate(parts_plain):
             for char_to_replace in list(replaceable_chars):

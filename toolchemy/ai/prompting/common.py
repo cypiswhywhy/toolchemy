@@ -1,20 +1,63 @@
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from toolchemy.utils.cacher import Cacher, ICacher
 from toolchemy.utils.logger import get_logger
 
 
+class InvalidPromptError(Exception):
+    pass
+
+
+@dataclass
+class Prompt:
+    system: str | None = None
+    user: str | None = None
+    template_system: str | None = None
+    template_user: str | None = None
+
+    def render_user(self, **variables) -> "Prompt":
+        if not self.template_user:
+            raise InvalidPromptError("missing user template")
+        return Prompt(system=self.system, user=self._prep_template(self.template_user).format(**variables),
+                      template_system=self.template_system, template_user=self.template_user)
+
+    def render_system(self, **variables) -> "Prompt":
+        if not self.template_system:
+            raise InvalidPromptError("missing system template")
+        return Prompt(system=self._prep_template(self.template_system).format(**variables), user=self.user, template_system=self.template_system,
+                      template_user=self.template_user)
+
+    def _prep_template(self, template: str | None) -> str | None:
+        if template is None:
+            return None
+        return template.replace("{{", "{").replace("}}", "}")
+
+    def json(self) -> dict:
+        return {
+            "system": self.system,
+            "user": self.user,
+            "template_system": self.template_system,
+            "template_user": self.template_user,
+        }
+
+    @classmethod
+    def from_json(cls, data: dict) -> "Prompt":
+        return cls(system=data.get("system", None), user=data.get("user", None), template_system=data.get("template_system", None),
+                   template_user=data.get("template_user", None))
+
+
 class IPrompter(ABC):
     @abstractmethod
-    def render(self, name: str, version: str | dict[str, str | list[str]] | None = None, **variables) -> str:
+    def render(self, name: str, version: str | None = None, version_system: str | None = None, optimize_rendered: bool = False, **variables) -> Prompt:
         pass
 
     @abstractmethod
-    def template(self, name: str, version: str | dict[str, str | list[str]] | None = None) -> str:
+    def create_template(self, name: str, template_user: str, template_system: str | None = None, overwrite: bool = False):
         pass
 
     @abstractmethod
-    def create_template(self, name: str, template: str, overwrite: bool = False):
+    def delete(self, name: str):
         pass
 
     @abstractmethod
@@ -22,10 +65,21 @@ class IPrompter(ABC):
         pass
 
 
+class IPromptOptimizer(ABC):
+    @abstractmethod
+    def refactor(self, prompt: Prompt) -> Prompt:
+        pass
+
+
 class PrompterBase(IPrompter, ABC):
-    def __init__(self, cacher: ICacher | None = None, no_cache: bool = False, log_level: int = logging.INFO):
+    DEFAULT_PROMPT_SYSTEM = "You are a helpful assistant"
+
+    def __init__(self, default_system_prompt: str | None = None, prompt_optimizer: IPromptOptimizer | None = None, cacher: ICacher | None = None,
+                 no_cache: bool = False, log_level: int = logging.INFO):
         self._logger = get_logger(level=log_level)
         self._cacher = cacher or Cacher(disabled=no_cache)
+        self._prompt_optimizer = prompt_optimizer
+        self._default_system_prompt = default_system_prompt or self.DEFAULT_PROMPT_SYSTEM
 
     def _prompt_version(self, name: str, version_mapping: str | dict[str, str | list[str]] | None = None) -> str | None:
         if version_mapping is None:
@@ -42,10 +96,4 @@ class PrompterBase(IPrompter, ABC):
 
     @abstractmethod
     def _latest_value(self) -> str |  None:
-        pass
-
-
-class IPromptOptimizer(ABC):
-    @abstractmethod
-    def refactor_prompt(self, system_prompt: str, user_prompt: str, target_model_name: str) -> tuple[str, str]:
         pass

@@ -43,7 +43,9 @@ class PrompterMLflow(PrompterBase):
         self._logger.debug(f"> user: '{name}' (version: '{version}') -> uri: '{prompt_uri_user}'")
         self._logger.debug(f"> user: '{name_system}' (version: '{version_system}') -> uri: '{prompt_uri_system}'")
 
-        cache_key = self._cacher.create_cache_key(["render", prompt_uri_user, prompt_uri_system, optimize_formatted], [variables])
+        cache_key = self._cacher.create_cache_key(
+            ["render", prompt_uri_user, prompt_uri_system, f"optimized_{self._prompt_optimizer is not None}", optimize_formatted], [variables])
+
         if self._cacher.exists(cache_key):
             self._logger.debug(f"Retrieving from the cache")
             prompt_json = self._cacher.get(cache_key)

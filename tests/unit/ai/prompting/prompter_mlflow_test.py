@@ -84,8 +84,9 @@ def test_render_with_cache(prompter, version: str):
     assert expected_prompt == rendered_prompt
 
     cache_key = prompter._cacher.create_cache_key(
-        ["render", prompter._build_prompt_uri(name=prompt_name, version=version), prompter._build_prompt_uri(f"{prompt_name}_system"), False],
+        ["render", prompter._build_prompt_uri(name=prompt_name, version=version), prompter._build_prompt_uri(f"{prompt_name}_system"), "optimized_False", False],
         [{"foo": "cat", "bar": "dog"}])
+
     assert prompter._cacher.exists(cache_key)
     rendered_prompt = Prompt.from_json(prompter._cacher.get(cache_key))
 

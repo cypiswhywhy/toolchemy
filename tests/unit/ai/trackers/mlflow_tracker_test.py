@@ -1,13 +1,8 @@
 import time
 from unittest import mock, TestCase
 from mlflow.entities import RunStatus, Metric, Param
-from random import randrange
 
 from toolchemy.ai.trackers import MLFlowTracker
-
-
-class ReturnDummy:
-    pass
 
 
 class MLFlowTrackerTest(TestCase):
@@ -17,11 +12,14 @@ class MLFlowTrackerTest(TestCase):
 
         self.sut = MLFlowTracker('uri', 'name', with_artifact_logging=True,
                                  tracking_client=self.mlflow_client_mock)
-        self.expected_run_id = randrange(1, 1000)
-        self.sut._active_run_id = self.expected_run_id
+        self.expected_run_id = "111"
+        self.mlflow_client_mock.create_run.return_value = mock.Mock(info=mock.Mock(run_id=self.expected_run_id, run_name="main"))
+        self.sut.start_run("main")
+        # self.sut._active_run_id = self.expected_run_id
         self.sut._get_git_username = lambda: None
 
     def tearDown(self):
+        self.sut.end_run()
         self.patcher.stop()
 
     @classmethod
@@ -41,63 +39,75 @@ class MLFlowTrackerTest(TestCase):
         cls.mlflow_resolve_tags_mock.stop()
 
     def test_start_run_when_experiment_does_not_exist(self):
-        expected_run = self._create_expected_run()
+        self.mlflow_client_mock.reset_mock()
+
         expected_experiment_id = 123
         user_specified_tags = {"description": "some description", "additional_info": "some info"}
 
         self.mlflow_client_mock.get_experiment_by_name.return_value = None
         self.mlflow_client_mock.create_experiment.return_value = expected_experiment_id
-        self.mlflow_client_mock.create_run.return_value = expected_run
+        self.mlflow_client_mock.create_run.return_value = mock.Mock(info=mock.Mock(run_id=self.expected_run_id, run_name="main"))
 
-        self.sut.start_run(user_specified_tags=user_specified_tags, run_name=expected_run.info.run_name)
+        self.sut.start_run(user_specified_tags=user_specified_tags, run_name="main")
 
         self.mlflow_client_mock.create_experiment.assert_called_once_with('name')
         self.mlflow_client_mock.create_run.assert_called_once_with(
             experiment_id=expected_experiment_id,
             start_time=None,
-            run_name=expected_run.info.run_name,
+            run_name="main",
             tags=self.expected_tags)
 
-        assert expected_run.info.run_name == self.sut.run_name
+        assert self.sut.run_name == "main"
 
     def test_start_run_when_experiment_exists(self):
-        expected_run = self._create_expected_run()
+        self.mlflow_client_mock.reset_mock()
+
         expected_experiment_id = 124
 
         type(self.mlflow_client_mock.get_experiment_by_name.return_value).experiment_id = expected_experiment_id
         self.mlflow_client_mock.create_experiment.return_value = expected_experiment_id
-        self.mlflow_client_mock.create_run.return_value = expected_run
+        self.mlflow_client_mock.create_run.return_value = mock.Mock(info=mock.Mock(run_id=self.expected_run_id, run_name="main"))
 
-        self.sut.start_run(run_name=expected_run.info.run_name)
+        self.sut.start_run(run_name="main")
 
         self.mlflow_client_mock.create_experiment.assert_not_called()
         self.mlflow_client_mock.create_run.assert_called_once_with(
             experiment_id=expected_experiment_id,
             start_time=None,
-            run_name=expected_run.info.run_name,
+            run_name="main",
             tags=self.expected_tags)
 
-        assert expected_run.info.run_name == self.sut.run_name
+        assert self.sut.run_name == "main"
 
     def test_start_run_as_nested_one(self):
-        expected_run = self._create_expected_run()
+        self.mlflow_client_mock.reset_mock()
         expected_experiment_id = 124
-        expected_parent_run_id = '222'
+        expected_parent_run_id = "222"
+        expected_run_id = "333"
 
         type(self.mlflow_client_mock.get_experiment_by_name.return_value).experiment_id = expected_experiment_id
-        self.mlflow_client_mock.create_experiment.return_value = expected_experiment_id
-        self.mlflow_client_mock.create_run.return_value = expected_run
 
-        self.sut.start_run(parent_run_id=expected_parent_run_id, run_name=expected_run.info.run_name)
+        self.mlflow_client_mock.create_run.side_effect = [
+            mock.Mock(info=mock.Mock(run_id=expected_parent_run_id, run_name="parent")),
+            mock.Mock(info=mock.Mock(run_id=expected_run_id, run_name="child"))
+        ]
+
+        self.sut.start_run(run_name="parent")
+        self.sut.start_run(run_name="child", parent_run_id=expected_parent_run_id)
 
         self.mlflow_client_mock.create_experiment.assert_not_called()
-        self.mlflow_client_mock.create_run.assert_called_once_with(
-            experiment_id=expected_experiment_id,
-            start_time=None,
-            run_name=expected_run.info.run_name,
-            tags=self.expected_tags)
 
-        assert expected_run.info.run_name == self.sut.run_name
+        expected_calls = [
+            mock.call(experiment_id=expected_experiment_id, start_time=None, run_name="parent", tags=self.expected_tags),
+            mock.call(experiment_id=expected_experiment_id, start_time=None, run_name="child", tags=self.expected_tags),
+        ]
+
+        self.mlflow_client_mock.create_run.assert_has_calls(expected_calls)
+
+        assert self.mlflow_client_mock.create_run.call_count == 2
+
+        self.sut.end_run()
+        self.sut.end_run()
 
     def test_end_run(self):
         status = RunStatus.to_string(RunStatus.FINISHED)
@@ -176,10 +186,9 @@ class MLFlowTrackerTest(TestCase):
     def test_set_run_tag(self):
         expected_name = 'tag'
         expected_value = 'some_tag'
-        expected_run_name = 'some_run'
+        expected_run_name = 'main'
 
-        expected_run = self._create_expected_run(expected_run_name)
-        self.mlflow_client_mock.create_run.return_value = expected_run
+        self.mlflow_client_mock.create_run.return_value = mock.Mock(info=mock.Mock(run_id=self.expected_run_id, run_name=expected_run_name))
 
         self.sut.start_run(run_name=expected_run_name)
 
@@ -303,12 +312,3 @@ class MLFlowTrackerTest(TestCase):
         }
         assert self.sut.get_data() == expected_data_2
         assert first_iteration_data == expected_data_1
-
-    def _create_expected_run(self, name: str | None = None):
-        run_name = name or self.expected_run_id
-        expected_run = ReturnDummy()
-        expected_run.info = ReturnDummy()
-        expected_run.info.run_id = self.expected_run_id
-        expected_run.info.run_name = name
-
-        return expected_run

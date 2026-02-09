@@ -19,6 +19,8 @@ class MLFlowTracker(TrackerBase):
                  tracking_client: MlflowClient | None = None):
         super().__init__(experiment_name, with_artifact_logging)
         self._client = None
+        self._runs = []
+        self._run_ids = []
         self._active_run = None
         self._active_run_id = None
         self._experiment_id = None
@@ -70,6 +72,10 @@ class MLFlowTracker(TrackerBase):
         if user_specified_tags is None:
             user_specified_tags = {}
         if parent_run_id is not None:
+            assert len(self._run_ids) > 0, "There is no parent run id in the stack!"
+            assert len(self._runs) > 0, "There is no parent run in the stack!"
+            assert self._run_ids[-1] == parent_run_id, f"The parent run id must be the active one (parent id: {self._run_ids[-1]}, requested parent id: {parent_run_id})!"
+            assert self._runs[-1].info.run_id == parent_run_id, f"The parent run must be the active one (parent id: {self._runs[-1].info.run_id}, requested parent id: {parent_run_id})"
             user_specified_tags[MLFLOW_PARENT_RUN_ID] = parent_run_id
         if run_name:
             user_specified_tags[MLFLOW_RUN_NAME] = run_name
@@ -94,23 +100,35 @@ class MLFlowTracker(TrackerBase):
             start_time=None,
             run_name=run_name,
             tags=tags)
-
         self._active_run_id = self._active_run.info.run_id
+        self._runs.append(self._active_run)
+        self._run_ids.append(self._active_run_id)
 
         self._logger.info(f"Starting the experiment tracking")
         self._logger.info(f"> experiment name: {self._experiment_name} {experiment_comment_msg}")
         self._logger.info(f"> experiment id: {self._experiment_id}")
-        self._logger.info(f"> run name: {run_name} (run id: {self._active_run_id})")
+        self._logger.info(f"> run name: {run_name} (run id: {str(self._active_run_id)}, runs in the stack: {len(self._runs)})")
 
     def end_run(self):
-        if self._disabled:
+        if self._disabled or self._active_run is None:
             return
 
+        self._logger.debug(f"The run (name: '{self._active_run.info.run_name}', id: '{self._active_run_id}') has completed")
+
         status = RunStatus.to_string(RunStatus.FINISHED)
+
         self._client.set_terminated(self._active_run_id, status)
         self._reset_run()
 
-        self._logger.debug(f"The run has completed")
+    def _reset_run(self):
+        self._logger.debug(f"Resetting the run...")
+        if len(self._runs) == 0 and len(self._run_ids) == 0 and self._active_run is None and self._active_run_id is None:
+            return
+
+        _ = self._run_ids.pop()
+        _ = self._runs.pop()
+        self._active_run = self._runs[-1] if len(self._runs) else None
+        self._active_run_id = self._run_ids[-1] if len(self._run_ids) else None
 
     def log(self, name: str, value: Any):
         if self._disabled:
@@ -203,11 +221,6 @@ class MLFlowTracker(TrackerBase):
         if filter_name:
             filter_string = f"trace.name = '{filter_name}'"
         return traces_to_df(self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string))
-
-    def _reset_run(self):
-        self._logger.debug(f"Resetting the run...")
-        self._active_run = None
-        self._active_run_id = None
 
 
 def play():

@@ -89,11 +89,6 @@ class MLFlowTracker(TrackerBase):
             self._logger.debug(f"Experiment '{self._experiment_name}' does not exist, creating a new one")
             self._experiment_id = self._client.create_experiment(self._experiment_name)
 
-        self._logger.info(f"Starting the experiment tracking")
-        self._logger.info(f"> experiment name: {self._experiment_name} {experiment_comment_msg}")
-        self._logger.info(f"> experiment id: {self._experiment_id}")
-        self._logger.info(f"> run name: {run_name}")
-
         self._active_run = self._client.create_run(
             experiment_id=self._experiment_id,
             start_time=None,
@@ -102,6 +97,11 @@ class MLFlowTracker(TrackerBase):
 
         self._active_run_id = self._active_run.info.run_id
 
+        self._logger.info(f"Starting the experiment tracking")
+        self._logger.info(f"> experiment name: {self._experiment_name} {experiment_comment_msg}")
+        self._logger.info(f"> experiment id: {self._experiment_id}")
+        self._logger.info(f"> run name: {run_name} (run id: {self._active_run_id})")
+
     def end_run(self):
         if self._disabled:
             return
@@ -109,6 +109,8 @@ class MLFlowTracker(TrackerBase):
         status = RunStatus.to_string(RunStatus.FINISHED)
         self._client.set_terminated(self._active_run_id, status)
         self._reset_run()
+
+        self._logger.debug(f"The run has completed")
 
     def log(self, name: str, value: Any):
         if self._disabled:
@@ -203,6 +205,7 @@ class MLFlowTracker(TrackerBase):
         return traces_to_df(self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string))
 
     def _reset_run(self):
+        self._logger.debug(f"Resetting the run...")
         self._active_run = None
         self._active_run_id = None
 

@@ -10,10 +10,18 @@ class UnknownImageFormatError(Exception):
 
 
 class ImageProcessor:
-    def __init__(self, image_path: str):
+    def __init__(self, input_image: str | Image.Image):
         self._logger = get_logger()
         self._img = None
-        self._image_path = image_path
+        self._image_path = None
+        if isinstance(input_image, str):
+            self._image_path = input_image
+        else:
+            self._img = input_image.copy()
+            self._img.format = input_image.format
+            self._img.format_description = input_image.format_description
+            self._img.filename = input_image.filename
+            self._img.info = input_image.info.copy()
 
     @property
     def img(self) -> Image.Image:
@@ -32,7 +40,7 @@ class ImageProcessor:
         self._open()
 
         img_file = BytesIO()
-        self._img.save(img_file, self._img.format)
+        self._img.save(img_file, self._img.format or None)
 
         metadata = {
             "width": self._img.width,
@@ -78,6 +86,8 @@ class ImageProcessor:
 
     def _open(self):
         if self._img is None:
+            if self._image_path is None:
+                raise ValueError(f"image_path is empty, cannot load the image")
             try:
                 self._img = Image.open(self._image_path)
             except UnidentifiedImageError as e:

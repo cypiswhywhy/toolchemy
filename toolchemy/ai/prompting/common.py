@@ -80,7 +80,7 @@ class IPrompter(ABC):
 
 class IPromptOptimizer(ABC):
     @abstractmethod
-    def refactor(self, prompt: Prompt) -> Prompt:
+    def refactor(self, prompt: Prompt, templates_only: bool = False) -> Prompt:
         pass
 
 

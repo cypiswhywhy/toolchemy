@@ -13,7 +13,7 @@ class SimpleLLMPromptOptimizer(IPromptOptimizer):
         self._target_model_name = target_model_name or llm.name()
         self._logger.info(f"Prompt Optimizer initialized (llm: {self._llm.name()}, target model: {self._target_model_name})")
 
-    def refactor(self, prompt: Prompt) -> Prompt:
+    def refactor(self, prompt: Prompt, templates_only: bool = False) -> Prompt:
         if not prompt.template_user or not prompt.template_system:
             raise InvalidPromptError("Templates for user and system must be present")
 
@@ -21,7 +21,7 @@ class SimpleLLMPromptOptimizer(IPromptOptimizer):
         self._logger.debug(f"> System template BEFORE:\n{prompt.template_system}")
         self._logger.debug(f"> User template BEFORE:\n{prompt.template_user}")
 
-        cache_key = self._cacher.create_cache_key("refactor", prompt.json())
+        cache_key = self._cacher.create_cache_key("refactor", [prompt.json(), templates_only])
         if self._cacher.exists(cache_key):
             prompt_json = self._cacher.get(cache_key)
             prompt = Prompt.from_json(prompt_json)
@@ -35,7 +35,7 @@ class SimpleLLMPromptOptimizer(IPromptOptimizer):
             self._logger.debug(f"> System template AFTER:\n{prompt.template_system}")
             self._logger.debug(f"> User template AFTER:\n{prompt.template_user}")
 
-        if prompt.user and prompt.system:
+        if not templates_only and prompt.user and prompt.system:
             prompt.system, prompt.user = self._refactor(user_prompt=prompt.user, system_prompt=prompt.system,
                                                         target_model_name=self._target_model_name)
             self._logger.debug(f"> System AFTER:\n{prompt.system}")

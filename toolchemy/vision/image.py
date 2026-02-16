@@ -1,5 +1,5 @@
 import base64
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, ImageDraw, UnidentifiedImageError
 from io import BytesIO
 
 from toolchemy.utils.logger import get_logger
@@ -97,3 +97,30 @@ class ImageProcessor:
         if self._img:
             self._img.close()
             self._img = None
+
+    @classmethod
+    def render_annotated(cls, img, boxes: list[dict] | None, color=(0, 255, 0), width=3):
+        img = ImageOps.exif_transpose(img).convert("RGB")
+
+        draw = ImageDraw.Draw(img)
+        font = None  # You can load a TTF if you want consistent sizing
+
+        for b in (boxes or []):
+            x1, y1, x2, y2 = [int(round(v)) for v in b["bbox"][:4]]
+            draw.rectangle([x1, y1, x2, y2], outline=color, width=width)
+            labels = "Unknown"
+            if "labels" in b and b["labels"]:
+                labels = b["labels"]
+                if isinstance(labels, list):
+                    labels = " / ".join(labels)
+            txt = labels
+            tw, th = draw.textlength(txt, font=font), 12
+            draw.rectangle([x1, max(0, y1 - th - 2), x1 + int(tw) + 6, y1], fill=(0, 0, 0))
+            draw.text((x1 + 3, y1 - th - 1), txt, fill=(255, 255, 255), font=font)
+
+        return img
+
+    @classmethod
+    def show_annotated(cls, img, boxes: list[dict] | None, color=(0, 255, 0), width=3):
+        img = cls.render_annotated(img, boxes, color, width)
+        img.show()

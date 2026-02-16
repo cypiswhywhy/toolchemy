@@ -34,6 +34,24 @@ class PrompterMLflow(PrompterBase):
         self._logger.info(f"> registry store uri: {self._registry_store_uri}")
 
     def render(self, name: str, version: str | None = None, version_system: str | None = None, optimize_formatted: bool = False, **variables) -> Prompt:
+        cache_key = self._cacher.create_cache_key(
+            ["render", name, version, version_system, f"optimized_{self._prompt_optimizer is not None}", optimize_formatted], [variables])
+
+        if self._cacher.exists(cache_key):
+            self._logger.debug(f"Retrieving from the cache")
+            prompt_json = self._cacher.get(cache_key)
+            return Prompt.from_json(prompt_json)
+
+        prompt = self.template(name=name, version=version, version_system=version_system)
+        prompt = prompt.format(**variables)
+        if optimize_formatted and self._prompt_optimizer:
+            prompt = self._prompt_optimizer.refactor(prompt)
+
+        self._cacher.set(cache_key, prompt.json())
+
+        return prompt
+
+    def template(self, name: str, version: str | None = None, version_system: str | None = None, optimize_rendered: bool = False) -> Prompt:
         name_system = f"{name}_system"
 
         prompt_uri_user = self._build_prompt_uri(name=name, version=version)
@@ -43,8 +61,7 @@ class PrompterMLflow(PrompterBase):
         self._logger.debug(f"> user: '{name}' (version: '{version}') -> uri: '{prompt_uri_user}'")
         self._logger.debug(f"> user: '{name_system}' (version: '{version_system}') -> uri: '{prompt_uri_system}'")
 
-        cache_key = self._cacher.create_cache_key(
-            ["render", prompt_uri_user, prompt_uri_system, f"optimized_{self._prompt_optimizer is not None}", optimize_formatted], [variables])
+        cache_key = self._cacher.create_cache_key(["template", prompt_uri_user, prompt_uri_system, f"optimized_{self._prompt_optimizer is not None}"])
 
         if self._cacher.exists(cache_key):
             self._logger.debug(f"Retrieving from the cache")
@@ -59,12 +76,7 @@ class PrompterMLflow(PrompterBase):
 
         prompt = Prompt(template_user=prompt_template_user, template_system=prompt_template_system)
         if self._prompt_optimizer:
-            if optimize_formatted:
-                prompt = prompt.format(**variables)
             prompt = self._prompt_optimizer.refactor(prompt)
-
-        if not optimize_formatted:
-            prompt = prompt.format(**variables)
 
         self._cacher.set(cache_key, prompt.json())
 

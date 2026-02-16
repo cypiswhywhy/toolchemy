@@ -66,6 +66,10 @@ class IPrompter(ABC):
         pass
 
     @abstractmethod
+    def template(self, name: str, version: str | None = None, version_system: str | None = None, optimize_rendered: bool = False) -> Prompt:
+        pass
+
+    @abstractmethod
     def create_template(self, name: str, template_user: str, template_system: str | None = None, overwrite: bool = False):
         pass
 

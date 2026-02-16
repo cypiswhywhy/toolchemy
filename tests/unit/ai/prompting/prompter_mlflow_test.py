@@ -11,6 +11,28 @@ from toolchemy.ai.prompting.common import Prompt, PrompterBase
     (None, None),
     (None, "1"),
 ])
+def test_mlflow_template(prompter, version: str | None, version_system: str | None):
+    prompt_name = "test_prompt"
+    expected_suffix = "First version." if version == "1" else "Second version."
+    expected_prompt = Prompt(
+        system=None,
+        user=None,
+        template_system=PrompterBase.DEFAULT_PROMPT_SYSTEM,
+        template_user=f"Yolo! I say {{{{foo}}}}, you say {{{{bar}}}}. {expected_suffix}",
+    )
+    template = prompter.template(name=prompt_name, version=version, version_system=version_system)
+
+    assert expected_prompt == template
+
+
+@pytest.mark.parametrize("version,version_system", [
+    ("1", None),
+    ("1", "1"),
+    ("2", None),
+    ("2", "1"),
+    (None, None),
+    (None, "1"),
+])
 def test_mlflow_render(prompter, version: str | None, version_system: str | None):
     prompt_name = "test_prompt"
     expected_suffix = "First version." if version == "1" else "Second version."
@@ -84,7 +106,7 @@ def test_render_with_cache(prompter, version: str):
     assert expected_prompt == rendered_prompt
 
     cache_key = prompter._cacher.create_cache_key(
-        ["render", prompter._build_prompt_uri(name=prompt_name, version=version), prompter._build_prompt_uri(f"{prompt_name}_system"), "optimized_False", False],
+        ["render", prompt_name, version, None, "optimized_False", False],
         [{"foo": "cat", "bar": "dog"}])
 
     assert prompter._cacher.exists(cache_key)

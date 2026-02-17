@@ -1,10 +1,11 @@
 import logging
 import os
 import sys
+import sqlite3
 from typing import Optional, Any
 from diskcache import Cache
 
-from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError
+from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError, CacheEntrySeemMalformedError, ICacher
 from toolchemy.utils.logger import get_logger
 from toolchemy.utils.locations import get_external_caller_path
 from toolchemy.utils.utils import _caller_module_name
@@ -66,8 +67,11 @@ class CacherDiskcache(BaseCacher):
             self._logger.debug("Cacher disabled")
             return False
 
-        if name in self._cache:
-            return True
+        try:
+            if name in self._cache:
+                return True
+        except sqlite3.OperationalError as e:
+            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {str(e)}")
         self._logger.debug("Cache entry %s::%s does not exist", self._cache_dir, name)
         return False
 

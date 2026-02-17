@@ -20,6 +20,10 @@ class CacheEntryHasNotBeenSetError(Exception):
     pass
 
 
+class CacheEntrySeemMalformedError(Exception):
+    pass
+
+
 class ICacher(abc.ABC):
     CACHER_MAIN_NAME = ".cache"
 

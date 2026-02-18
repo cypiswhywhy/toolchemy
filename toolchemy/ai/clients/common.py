@@ -106,6 +106,11 @@ class ILLMClient(ABC):
 
     @property
     @abstractmethod
+    def embeddings_size(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
     def usage_summary(self) -> dict:
         pass
 
@@ -226,6 +231,10 @@ Malformed JSON object:
     @property
     def embedding_name(self) -> str:
         return self._embedding_model_name
+
+    @property
+    def embeddings_size(self) -> int:
+        raise NotImplementedError("not yet implemented")
 
     def model_config(self, base_config: ModelConfig | None = None, default_model_name: str | None = None) -> ModelConfig:
         if base_config is None:

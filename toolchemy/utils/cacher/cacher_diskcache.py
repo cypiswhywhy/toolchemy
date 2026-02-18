@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import sqlite3
+import threading
 from typing import Optional, Any
 from diskcache import Cache
 
@@ -11,10 +12,25 @@ from toolchemy.utils.locations import get_external_caller_path
 from toolchemy.utils.utils import _caller_module_name
 
 
+class DummyLock:
+    def acquire(self, blocking: bool = False, timeout: int = -1) -> bool:
+        return False
+
+    def release(self):
+        pass
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+
 class CacherDiskcache(BaseCacher):
-    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, disabled: bool = False,
+    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, thread_safe: bool = False, disabled: bool = False,
                  log_level: int = logging.INFO):
         super().__init__()
+        self._thread_safe = thread_safe
         self._disabled = disabled
 
         self._log_level = log_level
@@ -33,8 +49,13 @@ class CacherDiskcache(BaseCacher):
         if self._disabled:
             return
 
+        self._lock = DummyLock()
+        if self._thread_safe:
+            self._lock = threading.RLock()
+
         try:
-            self._cache = Cache(self._cache_dir, cull_limit=0, size_limit=2**38)
+            with self._lock:
+                self._cache = Cache(self._cache_dir, cull_limit=0, size_limit=2**38)
         except Exception as e:
             raise CacherInitializationError(f"Failed to initialize disk cache for name '{self._name}' (cache dir: '{self._cache_dir}')") from e
 
@@ -68,8 +89,9 @@ class CacherDiskcache(BaseCacher):
             return False
 
         try:
-            if name in self._cache:
-                return True
+            with self._lock:
+                if name in self._cache:
+                    return True
         except sqlite3.OperationalError as e:
             raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {str(e)}")
         self._logger.debug("Cache entry %s::%s does not exist", self._cache_dir, name)
@@ -82,7 +104,8 @@ class CacherDiskcache(BaseCacher):
         if self._disabled:
             return
 
-        result = self._cache.set(name, content, expire=ttl_s)
+        with self._lock:
+            result = self._cache.set(name, content, expire=ttl_s)
         does_exist = self.exists(name)
         if not result or not does_exist:
             self._logger.error(f"Cache entry '{name}' not set for name '{self._name}' ({result}, {does_exist})")
@@ -102,8 +125,9 @@ class CacherDiskcache(BaseCacher):
 
         self._logger.debug("Cache get: %s::%s", self._cache_dir, name)
 
-        if name in self._cache:
-            return self._cache.get(name)
+        with self._lock:
+            if name in self._cache:
+                return self._cache.get(name)
 
         raise CacheEntryDoesNotExistError(f"Cache does not exist: {self._cache_dir}::{name}.")
 
@@ -115,11 +139,13 @@ class CacherDiskcache(BaseCacher):
         if self._disabled:
             return
 
-        if name in self._cache:
-            del self._cache[name]
-            self._logger.debug("Cache entry %s::%s removed", self._name, name)
-        else:
-            self._logger.warning("Cache entry %s::%s does not exist, nothing to remove", self._name, name)
+        with self._lock:
+            if name in self._cache:
+                del self._cache[name]
+                self._logger.debug("Cache entry %s::%s removed", self._name, name)
+            else:
+                self._logger.warning("Cache entry %s::%s does not exist, nothing to remove", self._name, name)
 
     def persist(self):
-        self._cache.close()
+        with self._lock:
+            self._cache.close()

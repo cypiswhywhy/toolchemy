@@ -6,6 +6,7 @@ DATA_COUNT = 100
 DATA_SIZE = 100
 DATA_COUNT_LARGE = 100
 DATA_SIZE_LARGE = 100000
+SHARDS = 8
 
 
 def _generate_input_data(item_count: int, item_size: int) -> list[dict]:
@@ -93,6 +94,14 @@ def test_diskcache_t_safe_set(benchmark, input_data):
         cacher.persist()
 
 
+@pytest.mark.benchmark(group="set")
+def test_diskcache_t_safe_fanout_set(benchmark, input_data):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
+        benchmark(benchmark_set, cacher=cacher, data=input_data)
+        cacher.persist()
+
+
 @pytest.mark.benchmark(group="set_large")
 def test_pickle_set_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -117,6 +126,14 @@ def test_diskcache_set_large(benchmark, input_data_large):
 
 
 @pytest.mark.benchmark(group="set_large")
+def test_diskcache_fanout_set_large(benchmark, input_data_large):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS)
+        benchmark(benchmark_set, cacher=cacher, data=input_data_large)
+        cacher.persist()
+
+
+@pytest.mark.benchmark(group="set_large")
 def test_pickle_t_safe_set_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherPickle(cache_base_dir=tmp_dir, enable_thread_safeness=True)
@@ -135,6 +152,14 @@ def test_shelve_t_safe_set_large(benchmark, input_data_large):
 def test_diskcache_t_safe_set_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, thread_safe=True)
+        benchmark(benchmark_set, cacher=cacher, data=input_data_large)
+        cacher.persist()
+
+
+@pytest.mark.benchmark(group="set_large")
+def test_diskcache_t_safe_set_large(benchmark, input_data_large):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         benchmark(benchmark_set, cacher=cacher, data=input_data_large)
         cacher.persist()
 
@@ -186,6 +211,15 @@ def test_shelve_t_safe_get(benchmark, input_data):
 def test_diskcache_t_safe_get(benchmark, input_data):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, thread_safe=True)
+        _prefill_cacher(cacher=cacher, input_data=input_data)
+        benchmark(benchmark_get, cacher=cacher, item_count=len(input_data))
+        cacher.persist()
+
+
+@pytest.mark.benchmark(group="get")
+def test_diskcache_t_safe_fanout_get(benchmark, input_data):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=8, thread_safe=True)
         _prefill_cacher(cacher=cacher, input_data=input_data)
         benchmark(benchmark_get, cacher=cacher, item_count=len(input_data))
         cacher.persist()
@@ -243,6 +277,15 @@ def test_diskcache_t_safe_get_large(benchmark, input_data_large):
         cacher.persist()
 
 
+@pytest.mark.benchmark(group="get_large")
+def test_diskcache_t_safe_get_large(benchmark, input_data_large):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
+        _prefill_cacher(cacher=cacher, input_data=input_data_large)
+        benchmark(benchmark_get, cacher=cacher, item_count=len(input_data_large))
+        cacher.persist()
+
+
 @pytest.mark.benchmark(group="exists")
 def test_pickle_exists(benchmark, input_data):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -278,6 +321,15 @@ def test_diskcache_t_safe_exists(benchmark, input_data):
         cacher.persist()
 
 
+@pytest.mark.benchmark(group="exists")
+def test_diskcache_t_safe_fanout_exists(benchmark, input_data):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
+        _prefill_cacher(cacher=cacher, input_data=input_data)
+        benchmark(benchmark_exists, cacher=cacher, item_count=len(input_data))
+        cacher.persist()
+
+
 @pytest.mark.benchmark(group="exists_large")
 def test_pickle_exists_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -308,6 +360,15 @@ def test_diskcache_exists_large(benchmark, input_data_large):
 def test_diskcache_t_safe_exists_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, thread_safe=True)
+        _prefill_cacher(cacher=cacher, input_data=input_data_large)
+        benchmark(benchmark_exists, cacher=cacher, item_count=len(input_data_large))
+        cacher.persist()
+
+
+@pytest.mark.benchmark(group="exists_large")
+def test_diskcache_t_safe_fanout_exists_large(benchmark, input_data_large):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         _prefill_cacher(cacher=cacher, input_data=input_data_large)
         benchmark(benchmark_exists, cacher=cacher, item_count=len(input_data_large))
         cacher.persist()

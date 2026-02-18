@@ -4,7 +4,7 @@ import sys
 import sqlite3
 import threading
 from typing import Optional, Any
-from diskcache import Cache
+from diskcache import Cache, FanoutCache
 
 from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError, CacheEntrySeemMalformedError, ICacher
 from toolchemy.utils.logger import get_logger
@@ -27,7 +27,7 @@ class DummyLock:
 
 
 class CacherDiskcache(BaseCacher):
-    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, thread_safe: bool = False, disabled: bool = False,
+    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, shards: int = 1, timeout: int = 30, thread_safe: bool = False, disabled: bool = False,
                  log_level: int = logging.INFO):
         super().__init__()
         self._thread_safe = thread_safe
@@ -55,7 +55,10 @@ class CacherDiskcache(BaseCacher):
 
         try:
             with self._lock:
-                self._cache = Cache(self._cache_dir, cull_limit=0, size_limit=2**38)
+                if shards > 1:
+                    self._cache = FanoutCache(self._cache_dir, shards=shards, timeout=timeout)
+                else:
+                    self._cache = Cache(self._cache_dir, cull_limit=0, size_limit=2**38, timeout=timeout)
         except Exception as e:
             raise CacherInitializationError(f"Failed to initialize disk cache for name '{self._name}' (cache dir: '{self._cache_dir}')") from e
 

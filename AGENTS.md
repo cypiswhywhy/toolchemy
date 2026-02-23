@@ -55,7 +55,7 @@ Use Poetry for all Python execution.
 ### Formatting
 
 - Indentation: 4 spaces.
-- Keep line length reasonable; wrap long calls with hanging indents.
+- Keep line length at or under 160 characters; wrap long calls with hanging indents.
 - Strings: no enforced quote style; follow surrounding file.
 - Use f-strings for interpolation.
 
@@ -98,6 +98,7 @@ Use Poetry for all Python execution.
 - Use `pytest` fixtures and `@pytest.mark.parametrize`.
 - Test file names end with `_test.py`.
 - Keep tests deterministic; use `freezegun` or seeded RNGs where needed.
+- Always create or update unit tests to cover behavior changes and new features.
 
 ### CLI entry points
 

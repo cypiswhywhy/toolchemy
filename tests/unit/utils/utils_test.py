@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 
-from toolchemy.utils.utils import pp, pp_cast, to_json, truncate
+from toolchemy.utils.utils import pp, pp_cast, to_json, truncate, batchize
 from toolchemy.utils.datestimes import str_to_datetime, datetime_to_str
 
 
@@ -285,3 +285,22 @@ def test_to_dict():
 ])
 def test_truncate(input_str: str, limit: int, expected_str: str):
     assert expected_str == truncate(input_str, limit)
+
+
+def test_batchize():
+    input_items = list(range(10))
+    batches = batchize(input_items, 10)
+
+    assert len(batches) == 1
+    assert batches[0] == input_items
+
+
+def test_batchize_many():
+    input_items = list(range(10))
+    batches = batchize(input_items, 3)
+
+    assert len(batches) == 4
+    assert batches[0] == [0, 1, 2]
+    assert batches[1] == [3, 4, 5]
+    assert batches[2] == [6, 7, 8]
+    assert batches[3] == [9]

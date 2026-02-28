@@ -161,6 +161,13 @@ def truncate(s: str, limit: int) -> str:
     return f"{s[:limit]} (...{str(len(s) - limit)} more chars)"
 
 
+def batchize(items: list[Any], batch_size: int)-> list[list[Any]]:
+    batches = []
+    for i in range(0, len(items), batch_size):
+        batches.append(items[i: i + batch_size])
+    return batches
+
+
 def _caller_module_name(offset: int = 2) -> str:
     frame = inspect.stack()[offset]
     module = inspect.getmodule(frame.frame)

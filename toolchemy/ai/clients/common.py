@@ -264,6 +264,11 @@ Malformed JSON object:
         self._cacher.unset(cache_key_json)
         self._cacher.unset(cache_key_usage_json)
 
+        self._logger.debug(f"invalidating cache key: {cache_key}")
+        self._logger.debug(f"invalidating cache key: {cache_key_usage}")
+        self._logger.debug(f"invalidating cache key: {cache_key_json}")
+        self._logger.debug(f"invalidating cache key: {cache_key_usage_json}")
+
     def completion_json(self, prompt: str, system_prompt: str | None = None, model_config: ModelConfig | None = None,
                         images_base64: list[str] | None = None, validation_schema: dict | None = None,
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
@@ -380,6 +385,8 @@ Malformed JSON object:
 
         if cache_only:
             raise LLMCacheDoesNotExist()
+
+        self._logger.debug(f"completion with the prompt: \n'{prompt}'")
 
         try:
             response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,

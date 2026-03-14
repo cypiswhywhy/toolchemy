@@ -386,8 +386,6 @@ Malformed JSON object:
         if cache_only:
             raise LLMCacheDoesNotExist()
 
-        self._logger.debug(f"completion with the prompt: \n'{prompt}'")
-
         try:
             response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
                                         model_config=model_config,

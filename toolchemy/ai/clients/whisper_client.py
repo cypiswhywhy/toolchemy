@@ -1,4 +1,6 @@
 import asyncio
+import logging
+
 import requests
 import sys
 import os
@@ -15,9 +17,10 @@ from toolchemy.utils.logger import get_logger
 
 
 class WhisperClient:
-    def __init__(self, url: str):
-        self._logger = get_logger()
+    def __init__(self, url: str, timeout: int | None = 30, log_level: int = logging.INFO):
+        self._logger = get_logger(level=log_level)
         self._endpoint = url
+        self._timeout = timeout
         self._whisper_client_wyoming = None
         if self._endpoint.startswith("http"):
             if not self._endpoint.endswith("transcribe"):
@@ -52,7 +55,8 @@ class WhisperClient:
             files = {"file": audio_file}
 
             self._logger.info(f"Sending '{audio_path}' to Whisper server...")
-            response = requests.post(self._endpoint, files=files)
+            response = requests.post(self._endpoint, files=files, timeout=self._timeout)
+            self._logger.debug(f"Got the response (status: {response.status_code})")
 
         if response.status_code == 200:
             result = response.json()

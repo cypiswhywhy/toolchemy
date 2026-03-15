@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from wyoming.client import AsyncClient
 from wyoming.audio import AudioChunk, AudioStart, AudioStop, AudioChunkConverter
-from wyoming.asr import Transcript
+from wyoming.asr import Transcript, Transcribe
 from wyoming.ping import Ping
 from wyoming.info import Describe
 import wave
@@ -33,21 +33,21 @@ class WhisperClient:
             raise ValueError(f"Unknown protocol for the whisper server endpoint: '{self._endpoint}'")
         self._logger.info(f"Whisper client initialized (endpoint: '{self._endpoint}')")
 
-    def transcribe(self, audio_path: str) -> str:
+    def transcribe(self, audio_path: str, language: str | None = None) -> str:
         transcription = None
 
         if self._endpoint.startswith("tcp"):
-            transcription = asyncio.run(self._transcribe_wyoming(audio_path))
+            transcription = asyncio.run(self._transcribe_wyoming(audio_path, language=language))
 
         if self._endpoint.startswith("http"):
-            transcription = self._transcribe_http(audio_path)
+            transcription = self._transcribe_http(audio_path, language=language)
 
         if transcription is None:
             raise RuntimeError(f"Transcription failed...")
 
         return transcription.strip()
 
-    def _transcribe_http(self, audio_path: str) -> str:
+    def _transcribe_http(self, audio_path: str, language: str | None = None) -> str:
         if not os.path.exists(audio_path):
             raise ValueError(f"Error: File '{audio_path}' not found.")
 
@@ -69,13 +69,16 @@ class WhisperClient:
         raise RuntimeError(err_msg)
 
     async def _transcribe_wyoming(self, audio_path: str, audio_rate: int = 16000, audio_width: int = 2,
-                                  audio_channels: int = 1, chunk_size: int = 1024) -> str:
+                                  audio_channels: int = 1, chunk_size: int = 1024, language: str | None = None) -> str:
         wav_path = self._convert_to_wav(audio_path, audio_rate=audio_rate, audio_channels=audio_channels)
 
         await self._whisper_client_wyoming.connect()
         await self._whisper_client_wyoming.write_event(Ping(text="test").event())
 
         await self._whisper_client_wyoming.write_event(Describe().event())
+
+        if language:
+            await self._whisper_client_wyoming.write_event(Transcribe(language=language).event())
 
         info_event = await self._whisper_client_wyoming.read_event()
         self._logger.info(f"info event: {info_event}")

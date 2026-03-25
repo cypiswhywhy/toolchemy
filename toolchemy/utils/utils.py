@@ -4,7 +4,6 @@ import inspect
 import json
 import numpy as np
 import random
-import torch
 import hashlib
 import base64
 
@@ -24,9 +23,9 @@ def seed_init_fn(x, only_deterministic: bool = False):
     seed = DEFAULT_SEED + x
     np.random.seed(seed)
     random.seed(seed)
-    torch.manual_seed(seed)
-    if only_deterministic:
-        torch.use_deterministic_algorithms(True)
+    # torch.manual_seed(seed)
+    # if only_deterministic:
+    #     torch.use_deterministic_algorithms(True)
 
 
 def bytes_to_str(byte_data: bytes) -> str:

@@ -1,13 +1,12 @@
 [tool.poetry]
 name = "toolchemy"
-version = "0.4.16"
+version = "0.4.17"
 description = "a set of auxiliary programming tools"
 authors = ["Cyprian Nosek <cyprian.nosek@protonmail.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.12"
 ollama = "^0.6.0"
-torch = "^2.7.0"
 numpy = "2.4.2"
 mlflow = "^3.8.1"
 neptune-scale = "^0.13.0"

@@ -5,6 +5,18 @@ KEY_OUTPUT_TOKENS = "output_tokens_cost"
 
 class Pricing:
     pricing_per_1_mln = {
+        "gpt-5.4": {
+            KEY_INPUT_TOKENS: 2.4,
+            KEY_OUTPUT_TOKENS: 15.00,
+        },
+        "gpt-5.4-nano": {
+            KEY_INPUT_TOKENS: 0.2,
+            KEY_OUTPUT_TOKENS: 1.25,
+        },
+        "gpt-5.4-mini": {
+            KEY_INPUT_TOKENS: 0.75,
+            KEY_OUTPUT_TOKENS: 4.50,
+        },
         "gpt-5.2": {
             KEY_INPUT_TOKENS: 1.75,
             KEY_OUTPUT_TOKENS: 14.00,

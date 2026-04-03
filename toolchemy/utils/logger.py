@@ -73,6 +73,7 @@ def get_logger(
     short_module_name: bool = False,
     say_hi: bool = False,
 ) -> logging.Logger:
+    level = level or logging.INFO
     name = name or _caller_module_name(offset=2)
     if name.endswith(".common"):
         # I'm sorry ;)

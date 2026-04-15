@@ -1,14 +1,16 @@
 """`agent-synergy` console command.
 
 Run inside any project that depends on toolchemy. If an AGENTS.md or CLAUDE.md
-file exists in the current working directory, append a pointer block telling
-coding agents to consult toolchemy's capability manifest before reimplementing
-utilities. Idempotent — re-running will not duplicate the block.
+file exists in the current working directory, insert (between markers) a short,
+strongly-worded pointer to the toolchemy capability manifest shipped inside the
+installed package. The pointer includes the manifest's resolved absolute path
+so an agent can read it directly with a single file-read, without running any
+helper command. Idempotent — re-running refreshes the resolved path.
 """
 
 from __future__ import annotations
 
-from importlib.resources import files
+from importlib.resources import as_file, files
 from pathlib import Path
 
 import click
@@ -18,33 +20,33 @@ MARKER_END = "<!-- toolchemy:agent-synergy:end -->"
 TARGET_FILENAMES = ("AGENTS.md", "CLAUDE.md")
 
 
-def _manifest_resource_path() -> str:
+def _manifest_path() -> str:
     try:
-        path = files("toolchemy").joinpath("AGENTS_MANIFEST.md")
-        return str(path)
+        resource = files("toolchemy").joinpath("AGENTS_MANIFEST.md")
+        with as_file(resource) as concrete:
+            return str(Path(concrete).resolve())
     except Exception:  # noqa: BLE001
         return "<toolchemy package>/AGENTS_MANIFEST.md"
 
 
 def _pointer_block() -> str:
-    manifest = _manifest_resource_path()
-    return "\n".join([
-        MARKER_BEGIN,
-        "## Reusing `toolchemy`",
+    manifest = _manifest_path()
+    body = "\n".join([
+        "## Reusing `toolchemy` — MANDATORY",
         "",
-        "This project depends on the `toolchemy` package. Before implementing any",
-        "utility, helper, or integration, consult the capability manifest shipped",
-        "inside the package and prefer reusing a listed symbol over writing new code:",
+        "This project depends on the `toolchemy` package, which ships a capability",
+        "manifest listing every reusable symbol it exposes (helpers, clients,",
+        "trackers, cache backends, vision/nlp utilities, etc.).",
         "",
-        f"- Manifest path: `{manifest}`",
-        "- Resolve at runtime with:",
-        "  `python -c \"from importlib.resources import files; print(files('toolchemy').joinpath('AGENTS_MANIFEST.md'))\"`",
+        f"**You MUST read this file once at the start of the session:** `{manifest}`",
         "",
-        "The manifest is regenerated on each `toolchemy` release, so treat it as the",
-        "authoritative, up-to-date inventory of what is available.",
-        MARKER_END,
-        "",
+        "Then, before writing ANY new utility, helper, client, wrapper, or",
+        "integration, check whether the manifest already lists a symbol that covers",
+        "the need. If it does, import and reuse it instead of reimplementing. Do not",
+        "assume a capability is missing just because it is not mentioned in this",
+        "file — the manifest is the authoritative, up-to-date inventory.",
     ])
+    return "\n".join([MARKER_BEGIN, body, MARKER_END, ""])
 
 
 def _update_file(path: Path) -> str:

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help lint test test-all test-perf _publish publish
+.PHONY: help lint test test-all test-perf docs-agents _publish publish
 
 help:
 	@echo "Available targets:"
@@ -17,6 +17,9 @@ test-all:                       ## Run all tests
 
 test-perf:                       ## Run perf tests
 	poetry run pytest ./tests/perf
+
+docs-agents:                     ## Regenerate AGENTS_MANIFEST.md from package introspection
+	poetry run python scripts/generate_agents_manifest.py
 
 _publish:
 	poetry version patch

@@ -1,8 +1,11 @@
 [tool.poetry]
 name = "toolchemy"
-version = "0.4.19"
+version = "0.5.1"
 description = "a set of auxiliary programming tools"
 authors = ["Cyprian Nosek <cyprian.nosek@protonmail.com>"]
+include = [
+    { path = "toolchemy/AGENTS_MANIFEST.md", format = ["sdist", "wheel"] },
+]
 
 [tool.poetry.dependencies]
 python = "~3.12"
@@ -32,6 +35,7 @@ deepdiff = "^8.6.1"
 
 [tool.poetry.scripts]
 prompt-studio = "toolchemy.ai.prompting.prompter_mlflow:run_studio"
+agent-synergy = "toolchemy.agent_synergy:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

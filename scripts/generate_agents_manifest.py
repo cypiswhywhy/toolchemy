@@ -1,0 +1,207 @@
+"""Generate AGENTS_MANIFEST.md by introspecting the toolchemy package.
+
+For every public function/class in every submodule, emit:
+- import path
+- signature (from `inspect.signature`)
+- one-line summary from the docstring if present, otherwise an inferred
+  description built from the name, kind, parameter names/types, and return type.
+"""
+
+from __future__ import annotations
+
+import importlib
+import inspect
+import pkgutil
+import re
+from pathlib import Path
+from typing import Any
+
+import toolchemy
+
+PACKAGE = toolchemy
+PACKAGE_NAME = PACKAGE.__name__
+ROOT = Path(__file__).resolve().parent.parent
+OUTPUT = ROOT / "toolchemy" / "AGENTS_MANIFEST.md"
+
+
+def iter_submodules(package) -> list:
+    mods = [package]
+    for info in pkgutil.walk_packages(package.__path__, prefix=f"{package.__name__}."):
+        if info.name.endswith("__main__"):
+            continue
+        try:
+            mods.append(importlib.import_module(info.name))
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ! skipping {info.name}: {exc}")
+    return mods
+
+
+_BOILERPLATE_DOC_PREFIXES = (
+    "Helper class that provides a standard way to create an ABC",
+    "Common base class for all non-exit exceptions.",
+    "Abstract base class",
+)
+
+
+def first_docline(obj: Any) -> str | None:
+    doc = inspect.getdoc(obj)
+    if not doc:
+        return None
+    line = doc.strip().splitlines()[0].strip()
+    if not line:
+        return None
+    if any(line.startswith(p) for p in _BOILERPLATE_DOC_PREFIXES):
+        return None
+    return line
+
+
+def humanize(name: str) -> str:
+    cleaned = name.lstrip("_")
+    parts = re.split(r"_+|(?<=[a-z0-9])(?=[A-Z])", cleaned)
+    return " ".join(p.lower() for p in parts if p)
+
+
+def safe_signature(obj: Any) -> str:
+    try:
+        return str(inspect.signature(obj))
+    except (TypeError, ValueError):
+        return "(...)"
+
+
+def annotation_str(annotation: Any) -> str:
+    if annotation is inspect.Parameter.empty:
+        return ""
+    if isinstance(annotation, type):
+        return annotation.__name__
+    return str(annotation).replace("typing.", "")
+
+
+def infer_function_description(func: Any) -> str:
+    verb = humanize(func.__name__) or "callable"
+    try:
+        sig = inspect.signature(func)
+    except (TypeError, ValueError):
+        return f"{verb.capitalize()} (no docstring; signature unavailable)."
+
+    params = [p for p in sig.parameters.values() if p.name not in {"self", "cls"}]
+    if params:
+        rendered = []
+        for p in params:
+            ann = annotation_str(p.annotation)
+            rendered.append(f"`{p.name}: {ann}`" if ann else f"`{p.name}`")
+        param_part = "takes " + ", ".join(rendered)
+    else:
+        param_part = "takes no arguments"
+
+    ret = annotation_str(sig.return_annotation)
+    ret_part = f"; returns `{ret}`" if ret else ""
+
+    return f"(inferred) {verb.capitalize()} — {param_part}{ret_part}."
+
+
+def infer_class_description(cls: type) -> str:
+    bases = [b.__name__ for b in cls.__bases__ if b is not object]
+    base_part = f" extends {', '.join(bases)}" if bases else ""
+    public_methods = [
+        n for n, _ in inspect.getmembers(cls, inspect.isfunction)
+        if not n.startswith("_")
+    ]
+    methods_part = ""
+    if public_methods:
+        preview = ", ".join(public_methods[:5])
+        more = "…" if len(public_methods) > 5 else ""
+        methods_part = f"; methods: {preview}{more}"
+    return f"(inferred) Class `{cls.__name__}`{base_part}{methods_part}."
+
+
+def is_public(name: str) -> bool:
+    return not name.startswith("_")
+
+
+def collect_module_entries(module, claimed: dict[int, str]) -> list[tuple[str, str, str, str]]:
+    entries: list[tuple[str, str, str, str]] = []
+    explicit = getattr(module, "__all__", None)
+    for name, obj in inspect.getmembers(module):
+        if explicit is not None:
+            if name not in explicit:
+                continue
+        else:
+            if not is_public(name):
+                continue
+            obj_module = getattr(obj, "__module__", None)
+            if obj_module != module.__name__:
+                continue
+
+        key = id(obj)
+        if key in claimed and claimed[key] != module.__name__:
+            continue
+        claimed[key] = module.__name__
+
+        if inspect.isfunction(obj):
+            kind = "function"
+            sig = safe_signature(obj)
+            desc = first_docline(obj) or infer_function_description(obj)
+        elif inspect.isclass(obj):
+            kind = "class"
+            try:
+                sig = safe_signature(obj)
+            except Exception:  # noqa: BLE001
+                sig = ""
+            desc = first_docline(obj) or infer_class_description(obj)
+        else:
+            continue
+        entries.append((name, kind, sig, desc))
+    entries.sort(key=lambda e: (e[1], e[0]))
+    return entries
+
+
+def render() -> str:
+    lines: list[str] = []
+    lines.append("# Toolchemy capability manifest")
+    lines.append("")
+    lines.append(
+        "Auto-generated by `make docs-agents`. Do not edit by hand. "
+        "Entries marked `(inferred)` lack a docstring and were derived from the signature."
+    )
+    lines.append("")
+    lines.append(
+        "Consumer agents: prefer reusing the symbols below over reimplementing "
+        "logging, caching, retries, prompt iteration, tracker plumbing, or LLM client wiring."
+    )
+    lines.append("")
+
+    modules = iter_submodules(PACKAGE)
+    # Claim symbols from shortest module path first so re-exports win over deep defs.
+    modules.sort(key=lambda m: (len(m.__name__), m.__name__))
+    claimed: dict[int, str] = {}
+    per_module: dict[str, list[tuple[str, str, str, str]]] = {}
+    for module in modules:
+        entries = collect_module_entries(module, claimed)
+        if entries:
+            per_module[module.__name__] = entries
+
+    for module in sorted(modules, key=lambda m: m.__name__):
+        entries = per_module.get(module.__name__)
+        if not entries:
+            continue
+        lines.append(f"## `{module.__name__}`")
+        mod_doc = first_docline(module)
+        if mod_doc:
+            lines.append("")
+            lines.append(f"_{mod_doc}_")
+        lines.append("")
+        for name, kind, sig, desc in entries:
+            lines.append(f"- **{kind}** `{name}{sig}` — {desc}")
+            lines.append(f"  - `from {module.__name__} import {name}`")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def main() -> None:
+    text = render()
+    OUTPUT.write_text(text, encoding="utf-8")
+    print(f"Wrote {OUTPUT.relative_to(ROOT)} ({len(text.splitlines())} lines)")
+
+
+if __name__ == "__main__":
+    main()

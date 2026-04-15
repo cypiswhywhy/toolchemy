@@ -45,6 +45,13 @@ def _pointer_block() -> str:
         "the need. If it does, import and reuse it instead of reimplementing. Do not",
         "assume a capability is missing just because it is not mentioned in this",
         "file — the manifest is the authoritative, up-to-date inventory.",
+        "",
+        "**Reporting:** if you reused one or more symbols from `toolchemy` during a",
+        "task, your final end-of-turn summary MUST include a short section titled",
+        "`Reused from toolchemy:` that lists each reused symbol as a bullet with its",
+        "import path (e.g. `- toolchemy.vision.caption_overlay.add_caption`). If",
+        "nothing from `toolchemy` was reused, omit the section entirely — do not",
+        "add a placeholder or \"none\" line.",
     ])
     return "\n".join([MARKER_BEGIN, body, MARKER_END, ""])
 

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "toolchemy"
-version = "0.5.3"
+version = "0.5.4"
 description = "a set of auxiliary programming tools"
 authors = ["Cyprian Nosek <cyprian.nosek@protonmail.com>"]
 include = [
@@ -14,7 +14,7 @@ numpy = "2.4.2"
 mlflow = "^3.8.1"
 neptune-scale = "^0.13.0"
 openai = "^2.16.0"
-pillow = "^11.2.1"
+pillow = "^12.2.0"
 wyoming = "^1.7.1"
 python-dateutil = "^2.9.0.post0"
 tinydb = "^4.8.2"

@@ -2,7 +2,8 @@ import logging
 import json
 
 from jsonschema import validate, ValidationError
-from tenacity import wait_exponential, Retrying, before_sleep_log, stop_after_attempt
+from tenacity import wait_exponential, Retrying, stop_after_attempt
+from tenacity import RetryCallState
 from dataclasses import dataclass
 from json import JSONDecodeError
 from json.decoder import JSONDecodeError as JSONDecoderDecodeError
@@ -162,9 +163,10 @@ class LLMClientBase(ILLMClient, ICollectable, ABC):
         self._keep_chat_session = keep_chat_session
         self._usages = []
         self._truncate_log_messages_to = truncate_log_messages_to
+        self._log_level = log_level
         self._retryer = Retrying(stop=stop_after_attempt(retry_attempts),
                                  wait=wait_exponential(multiplier=1, min=retry_min_wait, max=retry_max_wait),
-                                 before_sleep=before_sleep_log(self._logger, log_level=log_level))
+                                 before_sleep=self._before_sleep_log)
         self._fix_malformed_json = fix_malformed_json
         self._prompter = None
         if self._fix_malformed_json:
@@ -309,6 +311,35 @@ Malformed JSON object:
             self._cacher.set(cache_key_usage, usage)
 
         return response_json
+
+    def _before_sleep_log(self, retry_state: RetryCallState) -> None:
+        if retry_state.outcome is None or retry_state.next_action is None:
+            return
+
+        fn = retry_state.fn
+        fn_name = getattr(fn, "__qualname__", None) or getattr(fn, "__name__", None) or "<unknown>"
+        sleep_seconds = retry_state.next_action.sleep
+
+        if not retry_state.outcome.failed:
+            self._logger.log(self._log_level,
+                             f"Retrying {fn_name} in {sleep_seconds} seconds as it returned {retry_state.outcome.result()}.")
+            return
+
+        exception = retry_state.outcome.exception()
+        exception_chain = [f"{type(exception).__name__}: {exception}"]
+        cause = exception.__cause__ or exception.__context__
+        while cause is not None:
+            exception_chain.append(f"{type(cause).__name__}: {cause}")
+            cause = cause.__cause__ or cause.__context__
+
+        message = (f"Retrying {fn_name} in {sleep_seconds} seconds after attempt #{retry_state.attempt_number} "
+                   f"raised {' -> '.join(exception_chain)}")
+
+        model_config = retry_state.kwargs.get("model_config") if retry_state.kwargs else None
+        if model_config is not None:
+            message += f" | model config: {model_config.raw()}"
+
+        self._logger.log(self._log_level, message)
 
     def _completion_json(self, prompt: str, system_prompt: str, model_config: ModelConfig, images_base64: list[str] | None,
                          validation_schema: dict | None = None) -> tuple[dict | list[dict], Usage]:

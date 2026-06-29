@@ -57,6 +57,14 @@ class Pricing:
             KEY_INPUT_TOKENS: 0.01,
             KEY_OUTPUT_TOKENS: 0.03,
         },
+        "gemma4:26b": {
+            KEY_INPUT_TOKENS: 0.01,
+            KEY_OUTPUT_TOKENS: 0.03,
+        },
+        "gemma4:31b": {
+            KEY_INPUT_TOKENS: 0.01,
+            KEY_OUTPUT_TOKENS: 0.03,
+        },
         "qwen3:32b-q8_0": {
             KEY_INPUT_TOKENS: 0.01,
             KEY_OUTPUT_TOKENS: 0.03,
@@ -70,7 +78,10 @@ class Pricing:
     @classmethod
     def estimate(cls, model_name: str, input_tokens: int, output_tokens: int) -> float:
         if model_name not in cls.pricing_per_1_mln:
-            raise ValueError(f"Model '{model_name}' not supported for pricing estimation")
+            from toolchemy.utils.logger import get_logger
+            logger = get_logger()
+            logger.warning(f"Model '{model_name}' not supported for pricing estimation, returning zero value")
+            return 0.0
 
         model_pricing = cls.pricing_per_1_mln[model_name]
         input_cost = model_pricing[KEY_INPUT_TOKENS] * (input_tokens / 1_000_000)

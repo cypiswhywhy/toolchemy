@@ -9,7 +9,7 @@ from toolchemy.utils.datestimes import Seconds
 class OllamaClient(LLMClientBase):
     def __init__(self, uri: str, model_name: str | None = None, embedding_model_name: str | None = "nomic-embed-text",
                  default_model_config: ModelConfig | None = None, system_prompt: str | None = None,
-                 keep_chat_session: bool = False,
+                 keep_chat_session: bool = False, think: bool | None = False,
                  retry_attempts: int = 5, retry_min_wait: int = 2, retry_max_wait: int = 60,
                  truncate_log_messages_to: int = 200, fix_malformed_json: bool = True,
                  cacher: ICacher | None = None, disable_cache: bool = False, log_level: int = logging.INFO):
@@ -20,6 +20,9 @@ class OllamaClient(LLMClientBase):
                          truncate_log_messages_to=truncate_log_messages_to, fix_malformed_json=fix_malformed_json,
                          cacher=cacher, disable_cache=disable_cache, log_level=log_level)
         self._uri = uri
+        # think=False by default: with thinking left on (Ollama's default for thinking models) the reasoning
+        # tokens are hidden from `response` and can consume the whole num_predict budget, yielding empty output
+        self._think = think
         self._metadata["uri"] = self._uri
         assert self._uri, f"The model uri cannot be empty!"
 
@@ -44,11 +47,16 @@ class OllamaClient(LLMClientBase):
 
         system_prompt = system_prompt or self.system_prompt
         result = self._client.generate(model=model_config.model_name, system=system_prompt, prompt=prompt,
+                                       think=self._think,
                                        options={
                                            "temperature": model_config.temperature,
                                            "top_p": model_config.top_p,
                                            "num_predict": model_config.max_new_tokens,
                                        }, images=images_base64)
+
+        if getattr(result, "done_reason", None) == "length":
+            self._logger.warning(f"Generation stopped at the num_predict limit "
+                                 f"({model_config.max_new_tokens}), the response may be truncated")
 
         total_duration_s = result.total_duration * Seconds.NANOSECOND
         usage = Usage(input_tokens=result.prompt_eval_count, output_tokens=result.eval_count, duration=total_duration_s)

@@ -302,7 +302,7 @@ Malformed JSON object:
         except Exception:
             self._logger.error(f"> system prompt: {system_prompt}")
             self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_config.raw()}")
+            self._logger.error(f"> model config: {model_cfg.raw()}")
             raise
         self._usages.append(usage)
 
@@ -349,6 +349,10 @@ Malformed JSON object:
         response_json = None
 
         response_str = response_str.replace("```json", "").replace("```", "").strip()
+
+        if not response_str:
+            raise ModelResponseError("The LLM returned an empty response - if this is a thinking model, "
+                                     "make sure thinking is disabled or num_predict is large enough")
 
         try:
             response_json = self._decode_json(response_str)

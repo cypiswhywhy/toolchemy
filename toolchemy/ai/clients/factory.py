@@ -30,6 +30,9 @@ def create_llm(name: str, uri: str | None = None, api_key: str | None = None, de
     if uri == URI_GEMINI:
         if not api_key:
             raise ValueError(f"you must pass the 'api_key' explicitly as parameter for this function.")
+        if GeminiClient is None:
+            raise RuntimeError("Gemini support requires the 'google-genai' package, which is not installed "
+                               "(install the 'gemini' extra: toolchemy[gemini]).")
         return GeminiClient(default_model_name=name, api_key=api_key, system_prompt=system_prompt, default_model_config=default_model_config,
                             disable_cache=no_cache, log_level=log_level)
 

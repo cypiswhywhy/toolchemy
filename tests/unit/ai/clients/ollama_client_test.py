@@ -2,6 +2,7 @@ import pytest
 from unittest.mock import patch, call
 from tenacity import RetryError
 
+from toolchemy.ai.clients.common import ModelResponseError
 from toolchemy.ai.clients.ollama_client import OllamaClient, ModelConfig, Usage
 from toolchemy.utils.cacher import DummyCacher
 from toolchemy.utils.datestimes import Seconds
@@ -99,7 +100,7 @@ def test_completion(client_class_mock, client_class_mock_return_values, model_co
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2)
     response = client.completion(prompt=prompt, model_config=model_config)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": expected_model_config.temperature,
         "top_p": expected_model_config.top_p,
         "num_predict": expected_model_config.max_new_tokens,
@@ -178,7 +179,7 @@ def test_completion_cached(client_class_mock, client_class_mock_return_values, m
 
     response2 = client.completion(prompt=prompt, model_config=model_config)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": expected_model_config.temperature,
         "top_p": expected_model_config.top_p,
         "num_predict": expected_model_config.max_new_tokens,
@@ -227,7 +228,7 @@ def test_completion_json(client_class_mock, client_class_mock_return_values, mod
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2, fix_malformed_json=False)
     response = client.completion_json(prompt=prompt, model_config=model_config, validation_schema=validation_schema)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": expected_model_config.temperature,
         "top_p": expected_model_config.top_p,
         "num_predict": expected_model_config.max_new_tokens,
@@ -292,7 +293,7 @@ def test_completion_json_jsonl_format(client_class_mock, client_class_mock_retur
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2, fix_malformed_json=False)
     response = client.completion_json(prompt=prompt, model_config=model_config)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": model_config.temperature,
         "top_p": model_config.top_p,
         "num_predict": model_config.max_new_tokens,
@@ -337,7 +338,7 @@ def test_completion_json_jsonl_format_with_fix_json_failed(client_class_mock, cl
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2, fix_malformed_json=False)
     response = client.completion_json(prompt=prompt, model_config=model_config)
 
-    expected_calls = [call(model=expected_model_name, system=None, prompt=prompt, options={
+    expected_calls = [call(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": model_config.temperature,
         "top_p": model_config.top_p,
         "num_predict": model_config.max_new_tokens,
@@ -362,7 +363,7 @@ def test_completion_json_jsonl_format_with_fix_json_failed(client_class_mock, cl
 
     if client_class_mock_return_values[0].startswith("broken"):
         fix_json_prompt = client._fix_json_prompt_template.format(json_object=client_class_mock_return_values[0])
-        expected_calls.append(call(model=expected_model_name, system=None, prompt=fix_json_prompt, options={
+        expected_calls.append(call(model=expected_model_name, system=None, prompt=fix_json_prompt, think=False, options={
             "temperature": model_config.temperature,
             "top_p": model_config.top_p,
             "num_predict": model_config.max_new_tokens,
@@ -399,7 +400,7 @@ def test_completion_json_with_fix_json(client_class_mock, client_class_mock_retu
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2, fix_malformed_json=True)
     response = client.completion_json(prompt=prompt, model_config=model_config)
 
-    expected_calls = [call(model=expected_model_name, system=None, prompt=prompt, options={
+    expected_calls = [call(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": model_config.temperature,
         "top_p": model_config.top_p,
         "num_predict": model_config.max_new_tokens,
@@ -424,7 +425,7 @@ def test_completion_json_with_fix_json(client_class_mock, client_class_mock_retu
 
     if client_class_mock_return_values[0].startswith("broken"):
         fix_json_prompt = client._fix_json_prompt_template.format(json_object=client_class_mock_return_values[0])
-        expected_calls.append(call(model=expected_model_name, system=None, prompt=fix_json_prompt, options={
+        expected_calls.append(call(model=expected_model_name, system=None, prompt=fix_json_prompt, think=False, options={
             "temperature": model_config.temperature,
             "top_p": model_config.top_p,
             "num_predict": model_config.max_new_tokens,
@@ -444,6 +445,43 @@ def test_completion_json_with_fix_json(client_class_mock, client_class_mock_retu
     assert expected_usage == client.usage_summary
 
 
+@pytest.mark.parametrize("think", [None, False, True])
+@patch("toolchemy.ai.clients.ollama_client.Client")
+def test_completion_think_passthrough(client_class_mock, think):
+    prompt = "test"
+    model_config = ModelConfig()
+
+    mock_client = client_class_mock.return_value
+    mock_client.generate.return_value = _OllamaClientGenerateResponse("expected response")
+
+    client = OllamaClient(uri="http://uri", model_name="dummy-model", think=think, disable_cache=True,
+                          retry_min_wait=1, retry_attempts=2)
+    response = client.completion(prompt=prompt)
+
+    mock_client.generate.assert_called_with(model="dummy-model", system=None, prompt=prompt, think=think, options={
+        "temperature": model_config.temperature,
+        "top_p": model_config.top_p,
+        "num_predict": model_config.max_new_tokens,
+    }, images=None)
+
+    assert response == "expected response"
+
+
+@pytest.mark.parametrize("empty_response", ["", "   \n\n", "```json\n```"])
+@patch("toolchemy.ai.clients.ollama_client.Client")
+def test_completion_json_empty_response_raises(client_class_mock, empty_response):
+    mock_client = client_class_mock.return_value
+    mock_client.generate.return_value = _OllamaClientGenerateResponse(empty_response)
+
+    client = OllamaClient(uri="http://uri", model_name="dummy-model", disable_cache=True,
+                          retry_min_wait=1, retry_attempts=2)
+
+    with pytest.raises(RetryError) as exc_info:
+        _ = client.completion_json(prompt="test")
+
+    assert isinstance(exc_info.value.last_attempt.exception(), ModelResponseError)
+
+
 @patch("toolchemy.ai.clients.ollama_client.Client")
 def test_completion_with_cache(client_class_mock):
     model_config = ModelConfig(max_new_tokens=300, presence_penalty=0.5, temperature=0.6, top_p=0.88)
@@ -460,7 +498,7 @@ def test_completion_with_cache(client_class_mock):
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, cacher=cacher)
     response = client.completion(prompt=prompt, model_config=model_config)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": expected_model_config.temperature,
         "top_p": expected_model_config.top_p,
         "num_predict": expected_model_config.max_new_tokens,
@@ -517,7 +555,7 @@ def test_completion_json_with_cache(client_class_mock):
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, cacher=cacher)
     response = client.completion_json(prompt=prompt, model_config=model_config)
 
-    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, options={
+    mock_client.generate.assert_called_with(model=expected_model_name, system=None, prompt=prompt, think=False, options={
         "temperature": expected_model_config.temperature,
         "top_p": expected_model_config.top_p,
         "num_predict": expected_model_config.max_new_tokens,

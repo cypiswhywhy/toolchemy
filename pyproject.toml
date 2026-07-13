@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "toolchemy"
-version = "0.5.12"
+version = "0.5.13"
 description = "a set of auxiliary programming tools"
 authors = ["Cyprian Nosek <cyprian.nosek@protonmail.com>"]
 include = [
@@ -21,6 +21,18 @@ diskcache = "^5.6.3"
 colorlog = "^6.10.1"
 jsonschema = "^4.23.0"
 click = "^8.1.8"
+# direct dependency of toolchemy.vision (PIL imports); do not rely on the mlflow->matplotlib chain
+pillow = "^12.2.0"
+# optional: only needed for GeminiClient (install as `toolchemy[gemini]`)
+google-genai = { version = "^1.55.0", optional = true }
+
+[tool.poetry.extras]
+gemini = ["google-genai"]
+
+# google-genai installs into the `google.*` namespace package, so deptry cannot map
+# `from google import genai` back to it and false-flags it as unused (DEP002)
+[tool.deptry.package_module_name_map]
+google-genai = "google"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"

@@ -110,6 +110,13 @@ class TestCreateLLM(unittest.TestCase):
 
         self.assertIn("must pass the 'api_key' explicitly", str(context.exception))
 
+    def test_gemini_without_google_genai_installed_raises_error(self):
+        with patch("toolchemy.ai.clients.factory.GeminiClient", None):
+            with self.assertRaises(RuntimeError) as context:
+                create_llm(name="gemini-pro", uri=URI_GEMINI, api_key="key")
+
+        self.assertIn("toolchemy[gemini]", str(context.exception))
+
     def test_inference_failure_unknown_name(self):
         with self.assertRaises(ValueError) as context:
             create_llm(name="claude-3-opus", uri=None, api_key="key")

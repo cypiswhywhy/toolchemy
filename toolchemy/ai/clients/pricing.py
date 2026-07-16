@@ -61,6 +61,10 @@ class Pricing:
             KEY_INPUT_TOKENS: 0.01,
             KEY_OUTPUT_TOKENS: 0.03,
         },
+        "gemma4:12b": {
+            KEY_INPUT_TOKENS: 0.01,
+            KEY_OUTPUT_TOKENS: 0.01,
+        },
         "gemma4:31b": {
             KEY_INPUT_TOKENS: 0.01,
             KEY_OUTPUT_TOKENS: 0.03,

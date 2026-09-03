@@ -35,11 +35,11 @@ class CacheEntrySeemMalformedError(Exception):
 
 
 class ICacher(abc.ABC):
-    CACHER_MAIN_NAME = ".cache"
-
     """
     Cacher interface
     """
+
+    CACHER_MAIN_NAME = ".cache"
 
     @abstractmethod
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":

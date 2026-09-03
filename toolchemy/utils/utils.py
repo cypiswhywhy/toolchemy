@@ -58,7 +58,9 @@ def pp_cast(msg: Any, skip_fields: list | None = None) -> Any:
         msg_copy = ff(msg_copy)
     if isinstance(msg_copy, datetime.datetime):
         msg_copy = datetime_to_str(msg_copy)
-    if isinstance(msg_copy, object) and type(msg_copy).__module__ != "builtins":
+    # every value is an `object`, so the module check is the whole condition:
+    # anything not built-in gets rendered through its __dict__
+    if type(msg_copy).__module__ != "builtins":
         msg_copy = json.loads(json.dumps(msg_copy, default=vars))
     return msg_copy
 

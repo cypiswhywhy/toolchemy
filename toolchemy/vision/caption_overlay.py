@@ -37,7 +37,7 @@ def add_caption(input_img_path: str, captions: list[Caption], output_img_path: s
     draw = ImageDraw.Draw(txt)
 
     x_start = 50
-    for i, caption in enumerate(captions):
+    for caption in captions:
         draw.text((x_start, caption.y), caption.text, font=caption.font, fill=caption.color)
 
     glow = txt.filter(ImageFilter.GaussianBlur(5))

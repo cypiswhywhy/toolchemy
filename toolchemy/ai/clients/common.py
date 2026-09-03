@@ -378,7 +378,7 @@ Malformed JSON object:
                     self._logger.exception("Response failed schema validation")
                     raise
 
-        except JSONDecodeError as e:
+        except JSONDecodeError:
             if self._fix_malformed_json and self._fix_json_prompt_template:
                 self._logger.warning("Malformed JSON, trying to fix it...")
                 self._logger.warning(f"Malformed JSON:\n'{response_str}'")

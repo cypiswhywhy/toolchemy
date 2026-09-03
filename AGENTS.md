@@ -27,7 +27,8 @@ Use Poetry for all Python execution.
 
 - Unit tests: `make test`
 - Unit tests with branch coverage: `make test-cov`
-- All tests: `make test-all`
+- All tests that need no external service: `make test-all`
+- Integration tests: `make test-int`
 - Performance tests: `make test-perf`
 
 ### Single test
@@ -165,6 +166,9 @@ Use Poetry for all Python execution.
 ## Testing considerations
 
 - Prefer unit tests; perf tests live in `tests/perf` with `pytest-benchmark`.
+- A test that needs a live external service belongs in `tests/int`, carries
+  `@pytest.mark.integration`, and reads its endpoint from an environment variable so
+  `make test-all` stays green without it. Never hardcode a host.
 - For cache tests, assert error types (`CacheEntryDoesNotExistError`, etc.).
 - For client tests, use `DummyModelClient` (or another fake) to avoid network calls.
 - Regenerate `AGENTS_MANIFEST.md` with `make docs-agents` after adding or renaming a

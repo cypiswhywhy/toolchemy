@@ -11,7 +11,8 @@ All Python execution goes through Poetry. Python 3.12 only.
 - Install: `poetry install`
 - Lint: `make lint` (runs `ruff check toolchemy tests scripts`; config in `[tool.ruff]`)
 - Unit tests: `make test` (`poetry run pytest ./tests/unit`)
-- All tests incl. perf: `make test-all`
+- All tests incl. perf: `make test-all` (deselects the `integration` marker)
+- Integration tests: `make test-int` (needs `TOOLCHEMY_WHISPER_URL` and a live server; skips without it)
 - Unit tests with branch coverage: `make test-cov`
 - Perf benchmarks only: `make test-perf` (uses `pytest-benchmark`)
 - Single test: `poetry run pytest tests/unit/path/to/test_file.py::TestClass::test_name`

@@ -26,7 +26,7 @@ def get_external_caller_path(exclude_prefixes=None) -> str:
 
         path = Path(module.__file__).resolve()
         if all(not str(path).startswith(prefix) for prefix in exclude_prefixes):
-            project_root_path = str(_find_project_root(path.parents[1]))
+            project_root_path = str(_find_project_root(path.parent))
             if "site-packages" in project_root_path:
                 return str(Path.cwd())
             return project_root_path
@@ -81,8 +81,23 @@ class Locations:
         return os.path.abspath(os.path.expanduser(str(path)))
 
     def project_rel(self, path: str | Path) -> str | Path:
-        abs_path = str(self.abs(path))
-        rel_path = abs_path.replace(self.root, ".")
+        """
+        Renders a path relative to the project root as "./...".
+
+        The root is stripped as a path prefix, not as a substring: a sibling directory that merely
+        starts with the root's name, and a root that occurs again further down the path, are both
+        left alone. A path outside the root has no relative form here and is returned absolute.
+        """
+        abs_path = self.abs(path)
+        root_path = self._dirs["root"]
+
+        if abs_path == root_path:
+            rel_path = "."
+        elif abs_path.startswith(root_path + os.sep):
+            rel_path = f".{abs_path[len(root_path):]}"
+        else:
+            rel_path = abs_path
+
         if self._objective_path_mode:
             rel_path = Path(rel_path)
         return rel_path

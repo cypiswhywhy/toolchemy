@@ -109,7 +109,7 @@ class ImageProcessor:
             x1, y1, x2, y2 = [int(round(v)) for v in b["bbox"][:4]]
             draw.rectangle([x1, y1, x2, y2], outline=color, width=width)
             labels = "Unknown"
-            if "labels" in b and b["labels"]:
+            if b.get("labels"):
                 labels = b["labels"]
                 if isinstance(labels, list):
                     labels = " / ".join(labels)

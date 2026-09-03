@@ -171,7 +171,7 @@ class LightTinyDB(ILightDB):
 
     def _handle_index_remove(self, doc: dict):
         self._logger.debug(f"_handler_index_remove| doc: {doc}")
-        if len(doc.keys()) == 1 and list(doc.keys())[0] == self.ID_FIELD:
+        if len(doc) == 1 and self.ID_FIELD in doc:
             self._logger.debug("> the doc has a single key, trying to get the full document")
             doc = self.retrieve(doc[self.ID_FIELD])
             if doc is None:
@@ -244,7 +244,7 @@ class LightTinyDB(ILightDB):
         return str(uuid.uuid4())
 
     def _ensure_hash(self, doc: dict) -> dict:
-        if self.HASH_FIELD in doc and doc[self.HASH_FIELD]:
+        if doc.get(self.HASH_FIELD):
             self._logger.debug(f"the doc already has the hash property, keeping it as is: {doc[self.HASH_FIELD]}")
             return doc
         doc[self.HASH_FIELD] = self._generate_hash(doc)

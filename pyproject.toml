@@ -54,15 +54,21 @@ deepdiff = "^8.6.1"
 pytest-cov = "^7.0.0"
 ruff = "^0.15.4"
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: needs a live external service; deselected by `make test-all`, run with `make test-int`",
+]
+
 [tool.ruff]
 line-length = 160
 target-version = "py312"
 
 [tool.ruff.lint]
 # Rule groups are added as the tree is brought clean against them, so
-# `make lint` always passes on `main`.
-select = ["E4", "E7", "E9", "E501", "W", "F541", "RUF010", "SIM101", "SIM118", "SIM201", "SIM910",
-          "B904", "B014", "TRY201", "TRY400"]
+# `make lint` always passes on `main`. F is ruff's own default and must stay
+# whole: listing F541 alone left undefined names and unused imports ungated.
+select = ["E4", "E7", "E9", "E501", "W", "F", "B", "PIE", "ISC", "PLE", "RUF010",
+          "SIM101", "SIM118", "SIM201", "SIM910", "TRY201", "TRY400"]
 
 [tool.ruff.lint.per-file-ignores]
 # `mlflow.autolog(disable=True)` has to run before the mlflow submodules are

@@ -36,7 +36,7 @@ class OllamaClient(LLMClientBase):
             return self._cacher.get(cache_key)
 
         results_raw = self._client.embed(model=self.embedding_name, input=text)
-        results = [v for v in results_raw.embeddings[0]]
+        results = list(results_raw.embeddings[0])
 
         self._cacher.set(cache_key, results)
 

@@ -50,18 +50,17 @@ class CacherPickle(BaseCacher):
         target_filename = self._cache_name(name)
         target_file = Path(target_filename)
 
-        ret_val = False
         if target_file.is_file() or target_file.is_symlink():
             try:
                 # _get() already evicts and raises for an entry past its ttl
                 self._get(name)
             except CacheEntryDoesNotExistError:
                 return False
-            ret_val = True
             self._logger.debug("Cache entry %s::%s (%s) exists", self._name, name, target_filename)
+            return True
 
         self._logger.debug("Cache entry %s::%s does not exist", self._name, name)
-        return ret_val
+        return False
 
     def set(self, name: str, content: Any, ttl_s: int | None = None):
         if self._disabled:
@@ -71,10 +70,10 @@ class CacherPickle(BaseCacher):
             with open(target_filename, "wb") as file:
                 try:
                     pickle.dump(self._envelop(content, ttl_s=ttl_s), file)  # type: ignore
-                except TypeError as e:
-                    self._logger.error(f"Wrong type of the serialized content: {type(content)}. Target: {target_filename}. Content:\n{content}")
+                except TypeError:
+                    self._logger.exception(f"Wrong type of the serialized content: {type(content)}. Target: {target_filename}. Content:\n{content}")
                     shutil.rmtree(target_filename)
-                    raise e
+                    raise
         self._logger.debug("Cache set %s::%s (file: %s)", self._name, name, target_filename)
 
     def get(self, name: str) -> Any:
@@ -92,9 +91,9 @@ class CacherPickle(BaseCacher):
                 with open(target_filename, "rb") as file:
                     try:
                         restored_object = pickle.load(file, encoding="utf-8")
-                    except ModuleNotFoundError as e:
-                        self._logger.error(f"{e} while loading from file: '{target_filename}'")
-                        raise e
+                    except ModuleNotFoundError:
+                        self._logger.exception(f"Failed to load from file: '{target_filename}'")
+                        raise
                 if restored_object['ttl_s'] is not None:
                     current_time = current_unix_timestamp()
                     if current_time - restored_object['timestamp'] >= restored_object['ttl_s']:

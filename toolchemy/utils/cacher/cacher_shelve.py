@@ -57,12 +57,11 @@ class CacherShelve(BaseCacher):
                 self._logger.debug("Cache entry %s::%s exists", self._cache_dir, name)
                 try:
                     existing_entry = self._cache[name]
-                except Exception as e:
-                    self._logger.error(f"Cache entry failed to fetch cached entry: {e}")
-                    self._logger.error(f"Existing keys: {self._cache.keys()}")
+                except Exception:
+                    self._logger.exception(f"Failed to fetch cached entry. Existing keys: {self._cache.keys()}")
                     if self._enable_thread_safeness:
                         self._close()
-                    raise e
+                    raise
                 self._logger.debug(f"Cache existing entry: {existing_entry}")
                 entry = self._migrate(name, existing_entry)
                 if self._cache[name]['ttl_s'] is None:

@@ -278,7 +278,7 @@ Malformed JSON object:
         model_cfg = self.model_config(model_config, self._model_name)
         system_prompt = system_prompt or self._system_prompt
         self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, "
-                           f"temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
+                           f"temp: {model_cfg.temperature}, top_p: {model_cfg.top_p})")
         self._logger.debug(f"> Model config (mod): model: {model_cfg.model_name}, max_new_tokens: {model_cfg.max_new_tokens}, temp: {model_cfg.temperature}")
 
         return self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_cfg,
@@ -317,9 +317,10 @@ Malformed JSON object:
                                                 model_config=model_config,
                                                 images_base64=images_base64)
         except Exception:
-            self._logger.error(f"> system prompt: {system_prompt}")
-            self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_config.raw()}")
+            self._logger.exception(f"Completion failed\n"
+                                   f"> system prompt: {system_prompt}\n"
+                                   f"> prompt: {prompt}\n"
+                                   f"> model config: {model_config.raw()}")
             raise
 
         self._usages.append(usage)
@@ -377,9 +378,9 @@ Malformed JSON object:
             if validation_schema:
                 try:
                     validate(instance=response_json, schema=validation_schema)
-                except ValidationError as e:
-                    self._logger.error(f"Invalid schema: {e}")
-                    raise e
+                except ValidationError:
+                    self._logger.exception("Response failed schema validation")
+                    raise
 
         except JSONDecodeError as e:
             if self._fix_malformed_json and self._fix_json_prompt_template:
@@ -389,9 +390,9 @@ Malformed JSON object:
                 response_json = self.completion_json(fix_json_prompt)
                 self._logger.debug(f"Fixed JSON:\n{response_json}")
             if response_json is None:
-                self._logger.error(f"Invalid JSON:\n{truncate(response_str, self._truncate_log_messages_to)}\n")
-                self._logger.error(f"> prompt:\n{truncate(prompt, self._truncate_log_messages_to)}")
-                raise e
+                self._logger.exception(f"Invalid JSON:\n{truncate(response_str, self._truncate_log_messages_to)}\n"
+                                       f"> prompt:\n{truncate(prompt, self._truncate_log_messages_to)}")
+                raise
 
         return response_json, usage
 

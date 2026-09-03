@@ -64,10 +64,10 @@ class AtExitCollector:
         for collectable in cls._collectables:
             try:
                 data = collectable.collect()
-            except TypeError as e:
-                cls._collector_logger.error(f"Collectable of wrong type: {type(collectable)} "
-                                            f"(is ICollectable: {isinstance(collectable, ICollectable)}): {collectable} (err msg: {e})")
-                raise e
+            except TypeError:
+                cls._collector_logger.exception(f"Collectable of wrong type: {type(collectable)} "
+                                                f"(is ICollectable: {isinstance(collectable, ICollectable)}): {collectable}")
+                raise
 
             name = collectable.label()
             if name not in aggregated:

@@ -59,7 +59,7 @@ class SimpleLLMPromptOptimizer(IPromptOptimizer):
             system_prompt_refactored = result["refactored_system"]
             prompt_refactored = result["refactored_user"]
         except Exception:
-            self._logger.error(f"Invalid response format. The response:\n''{result}")
+            self._logger.exception(f"Invalid response format. The response:\n{result}")
             raise
 
         return system_prompt_refactored, prompt_refactored

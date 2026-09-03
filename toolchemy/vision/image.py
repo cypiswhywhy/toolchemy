@@ -91,7 +91,7 @@ class ImageProcessor:
             try:
                 self._img = Image.open(self._image_path)
             except UnidentifiedImageError as e:
-                raise UnknownImageFormatError(str(e))
+                raise UnknownImageFormatError(str(e)) from e
 
     def _close(self):
         if self._img:

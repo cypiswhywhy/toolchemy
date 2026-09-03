@@ -68,7 +68,7 @@ class CacherDiskcache(BaseCacher):
                 if name in self._cache:
                     return True
         except sqlite3.OperationalError as e:
-            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {e!s}")
+            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {e!s}") from e
         self._logger.debug("Cache entry %s::%s does not exist", self._cache_dir, name)
         return False
 

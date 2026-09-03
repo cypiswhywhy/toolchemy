@@ -168,11 +168,11 @@ class MLFlowTracker(TrackerBase):
             return
         try:
             self._client.log_text(run_id=self._active_run_id, text=value, artifact_file=name)
-        except MlflowException as e:
-            self._logger.error(f"An error occurred during text logging: {e}")
-            self._logger.error(f"> tracking uri: {self._client.tracking_uri}")
-            self._logger.error(f"> artifact uri: {self._active_run.info.artifact_uri}")
-            raise e
+        except MlflowException:
+            self._logger.exception(f"An error occurred during text logging\n"
+                                   f"> tracking uri: {self._client.tracking_uri}\n"
+                                   f"> artifact uri: {self._active_run.info.artifact_uri}")
+            raise
 
     def log_metric(self, name: str, value: float, step: int | None = None, metric_metadata: dict | None = None):
         if self._disabled:

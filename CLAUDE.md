@@ -49,6 +49,7 @@ Domain-specific utilities (image ops, text helpers, DB wrappers — notably `tin
 ## Conventions worth remembering
 
 - Line length ≤ 160 chars.
+- Inline comments: one line, occasionally two; longer rationale goes in the docstring.
 - Python 3.10+ typing syntax (`str | None`, `list[str]`); `TypedDict` for dict payloads, `@dataclass` for plain containers, `pydantic.BaseModel` for config models.
 - Explicit signatures — avoid `*args/**kwargs` unless truly needed.
 - Keep edits ASCII-only unless the file already uses Unicode.

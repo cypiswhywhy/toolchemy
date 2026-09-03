@@ -59,6 +59,10 @@ Use Poetry for all Python execution.
 - Keep line length at or under 160 characters; wrap long calls with hanging indents.
 - Strings: no enforced quote style; follow surrounding file.
 - Use f-strings for interpolation.
+- Inline comments are one line, occasionally two. Longer rationale belongs in the
+  function's docstring or the commit message, where a reader goes looking for it -
+  a paragraph wedged between statements pushes the code apart and goes stale faster
+  than the line it describes.
 
 ### Types
 

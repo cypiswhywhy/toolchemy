@@ -162,7 +162,10 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
     @staticmethod
     def hash(name: str) -> str:
-        hash_object = hashlib.md5(name.encode('utf-8'))
+        # md5 is used to shorten cache key components, never as a security primitive.
+        # usedforsecurity=False states that and keeps this working on FIPS builds;
+        # it does not change the digest, so existing cache entries stay addressable.
+        hash_object = hashlib.md5(name.encode('utf-8'), usedforsecurity=False)
         return hash_object.hexdigest()
 
     @staticmethod

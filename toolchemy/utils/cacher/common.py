@@ -12,9 +12,8 @@ from toolchemy.utils.locations import get_external_caller_path
 from toolchemy.utils.logger import get_logger
 from toolchemy.utils.utils import _caller_module_name
 
-# _caller_module_name() walks the stack, so the helpers below are only correct
-# when called directly from a concrete cacher: _caller_module_name ->
-# _init_common/_sub_cacher_params -> Subclass.__init__/sub_cacher -> caller.
+# Only correct when called directly from a concrete cacher, because _caller_module_name
+# walks the stack: it -> _init_common/_sub_cacher_params -> Subclass.__init__ -> caller.
 _CALLER_STACK_OFFSET = 3
 
 
@@ -162,9 +161,13 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
     @staticmethod
     def hash(name: str) -> str:
-        # md5 is used to shorten cache key components, never as a security primitive.
-        # usedforsecurity=False states that and keeps this working on FIPS builds;
-        # it does not change the digest, so existing cache entries stay addressable.
+        """
+        Shortens one cache key component.
+
+        md5 is a key shortener here, never a security primitive. usedforsecurity=False
+        states that and keeps this working on FIPS builds; it does not change the digest,
+        so cache entries written by earlier versions stay addressable.
+        """
         hash_object = hashlib.md5(name.encode('utf-8'), usedforsecurity=False)
         return hash_object.hexdigest()
 

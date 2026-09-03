@@ -374,12 +374,16 @@ def test_diskcache_t_safe_fanout_exists_large(benchmark, input_data_large):
         cacher.persist()
 
 
-# create_cache_key sits on the hot path of every cached completion. Its plain-part
-# sanitiser runs one str.replace per replaceable character, which looks quadratic but
-# measures faster than str.translate, because replace short-circuits on absent chars.
-# These benchmarks exist so that trade-off can be re-checked with data rather than by eye.
 @pytest.mark.benchmark(group="cache_key")
 def test_create_cache_key_short(benchmark):
+    """
+    Benchmarks create_cache_key, which sits on the hot path of every cached completion.
+
+    Its plain-part sanitiser runs one str.replace per replaceable character, which looks
+    quadratic but measures faster than str.translate, because replace short-circuits on
+    absent characters. These benchmarks exist so that trade-off is re-checked with data
+    rather than by eye.
+    """
     benchmark(BaseCacher.create_cache_key, ["llm_completion_json"], ["system prompt", "prompt"])
 
 

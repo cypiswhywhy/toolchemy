@@ -223,27 +223,3 @@ class MLFlowTracker(TrackerBase):
         if filter_name:
             filter_string = f"trace.name = '{filter_name}'"
         return traces_to_df(self._client.search_traces(experiment_ids=[self.experiment_id], run_id=self.run_id, filter_string=filter_string))
-
-
-def play():
-    from toolchemy.utils.datestimes import current_datetime_str
-    from toolchemy.ai.prompting.prompter_mlflow import PrompterMLflow
-    from toolchemy.utils import Locations
-
-    locations = Locations()
-    tracker = MLFlowTracker("http://hal:5000", f"test-{current_datetime_str()}")
-    tracker.start_run()
-    prompter = PrompterMLflow(locations.in_resources("tests/prompts_mlflow"))
-    print(prompter.render("test_prompt", foo="foo1", bar="bar1"))
-    tracker.log_param("param1", "param1value")
-    tracker.log_param("param2", 2)
-    tracker.log_metric("metric1", 1.0)
-    tracker.log_metric("metric2", 2.0, metric_metadata={"info": "metric 2 metadata"})
-    tracker.log_text("text_test", "some longer piece of text")
-    print(prompter.render("test_prompt", foo="foo1", bar="bar1"))
-    tracker.end_run()
-    print(prompter.render("test_prompt", foo="foo1", bar="bar1"))
-
-
-if __name__ == "__main__":
-    play()

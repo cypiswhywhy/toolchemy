@@ -5,22 +5,10 @@ import threading
 from typing import Optional, Any
 from diskcache import Cache, FanoutCache
 
+# DummyLock is re-exported: `from ...cacher_diskcache import DummyLock` is a published
+# import path, kept working now that the definition lives in common.
 from toolchemy.utils.cacher.common import (BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError,
-                                           CacherInitializationError, CacheEntrySeemMalformedError, ICacher)
-
-
-class DummyLock:
-    def acquire(self, blocking: bool = False, timeout: int = -1) -> bool:
-        return False
-
-    def release(self):
-        pass
-
-    def __enter__(self):
-        return
-
-    def __exit__(self, type, value, traceback):
-        pass
+                                           CacherInitializationError, CacheEntrySeemMalformedError, DummyLock, ICacher)
 
 
 class CacherDiskcache(BaseCacher):

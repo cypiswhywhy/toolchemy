@@ -12,9 +12,8 @@ from toolchemy.utils.locations import get_external_caller_path
 from toolchemy.utils.logger import get_logger
 from toolchemy.utils.utils import _caller_module_name
 
-# _caller_module_name() walks the stack, so the helpers below are only correct
-# when called directly from a concrete cacher: _caller_module_name ->
-# _init_common/_sub_cacher_params -> Subclass.__init__/sub_cacher -> caller.
+# Only correct when called directly from a concrete cacher, because _caller_module_name
+# walks the stack: it -> _init_common/_sub_cacher_params -> Subclass.__init__ -> caller.
 _CALLER_STACK_OFFSET = 3
 
 
@@ -162,9 +161,13 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
     @staticmethod
     def hash(name: str) -> str:
-        # md5 is used to shorten cache key components, never as a security primitive.
-        # usedforsecurity=False states that and keeps this working on FIPS builds;
-        # it does not change the digest, so existing cache entries stay addressable.
+        """
+        Shortens one cache key component.
+
+        md5 is a key shortener here, never a security primitive. usedforsecurity=False
+        states that and keeps this working on FIPS builds; it does not change the digest,
+        so cache entries written by earlier versions stay addressable.
+        """
         hash_object = hashlib.md5(name.encode('utf-8'), usedforsecurity=False)
         return hash_object.hexdigest()
 
@@ -211,25 +214,36 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
 
 class DummyLock:
-    def __enter__(self):
+    """No-op stand-in for threading.RLock, used when thread safety is off."""
+
+    def acquire(self, blocking: bool = False, timeout: int = -1) -> bool:
+        return False
+
+    def release(self):
         pass
+
+    def __enter__(self):
+        return None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
 
 class DummyCacher(BaseCacher):
-    def __init__(self, with_memory_store: bool = False):
+    def __init__(self, with_memory_store: bool = False, log_level: int = logging.INFO):
         super().__init__()
         self._data = {}
         self._with_memory_store = with_memory_store
+        self._log_level = log_level
+        self._logger = get_logger(level=log_level)
 
     @property
     def cache_location(self) -> str:
         return ""
 
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
-        return DummyCacher(with_memory_store=self._with_memory_store)
+        return DummyCacher(with_memory_store=self._with_memory_store,
+                           log_level=self._log_level if log_level is None else log_level)
 
     def _exists(self, name: str) -> bool:
         if not self._with_memory_store:

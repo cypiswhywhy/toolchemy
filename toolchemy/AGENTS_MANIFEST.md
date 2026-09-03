@@ -54,8 +54,6 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
 
 - **class** `WhisperClient(url: str, timeout: int | None = 30, log_level: int = 20)` — (inferred) Class `WhisperClient`; methods: transcribe.
   - `from toolchemy.ai.clients.whisper_client import WhisperClient`
-- **function** `main(argv: list)` — (inferred) Main — takes `argv: list`.
-  - `from toolchemy.ai.clients.whisper_client import main`
 
 ## `toolchemy.ai.prompting`
 
@@ -67,7 +65,7 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
   - `from toolchemy.ai.prompting import PrompterBase`
 - **class** `PrompterMLflow(default_system_prompt: str | None = None, registry_store_dir: str | None = None, prompt_optimizer: toolchemy.ai.prompting.common.IPromptOptimizer | None = None, cacher: toolchemy.utils.cacher.common.ICacher | None = None, no_cache: bool = False, log_level: int = 20)` — (inferred) Class `PrompterMLflow` extends PrompterBase; methods: create_template, delete, render, run_studio, template.
   - `from toolchemy.ai.prompting import PrompterMLflow`
-- **class** `SimpleLLMPromptOptimizer(llm: toolchemy.ai.clients.common.ILLMClient, target_model_name: str | None = None, log_level: int = 20)` — (inferred) Class `SimpleLLMPromptOptimizer` extends IPromptOptimizer; methods: refactor.
+- **class** `SimpleLLMPromptOptimizer(llm: toolchemy.ai.clients.common.ILLMClient, target_model_name: str | None = None, log_level: int = 20, cacher: toolchemy.utils.cacher.common.ICacher | None = None)` — (inferred) Class `SimpleLLMPromptOptimizer` extends IPromptOptimizer; methods: refactor.
   - `from toolchemy.ai.prompting import SimpleLLMPromptOptimizer`
 
 ## `toolchemy.ai.prompting.common`
@@ -100,11 +98,6 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
 - **class** `TrackerBase(experiment_name: str, with_artifact_logging: bool = True, disabled: bool = False)` — (inferred) Class `TrackerBase` extends ITracker, ABC; methods: disable, end_run, get_avg_metric_value, get_data, get_max_metric_value….
   - `from toolchemy.ai.trackers.common import TrackerBase`
 
-## `toolchemy.ai.trackers.mlflow_tracker`
-
-- **function** `play()` — (inferred) Play — takes no arguments.
-  - `from toolchemy.ai.trackers.mlflow_tracker import play`
-
 ## `toolchemy.db`
 
 - **class** `Filter(key: str, value: Any, op: toolchemy.db.lightdb.FilterOp = <FilterOp.EQUAL: 5>) -> None` — Filter(key: str, value: Any, op: toolchemy.db.lightdb.FilterOp = <FilterOp.EQUAL: 5>)
@@ -133,7 +126,7 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
   - `from toolchemy.utils import Cacher`
 - **class** `CacherPickle(name: str | None = None, cache_base_dir: Optional[str] = None, disabled: bool = False, log_level: int = 20, enable_thread_safeness: bool = False)` — Cacher implementation where cache is stored as a pickled local file
   - `from toolchemy.utils import CacherPickle`
-- **class** `DummyCacher(with_memory_store: bool = False)` — (inferred) Class `DummyCacher` extends BaseCacher; methods: collect, create_cache_key, exists, get, hash….
+- **class** `DummyCacher(with_memory_store: bool = False, log_level: int = 20)` — (inferred) Class `DummyCacher` extends BaseCacher; methods: collect, create_cache_key, exists, get, hash….
   - `from toolchemy.utils import DummyCacher`
 - **class** `ICacher()` — Cacher interface
   - `from toolchemy.utils import ICacher`
@@ -167,11 +160,6 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
 - **class** `CacherShelve(name: str | None = None, cache_base_dir: Optional[str] = None, disabled: bool = False, log_level: int = 20, enable_thread_safeness: bool = False)` — (inferred) Class `CacherShelve` extends BaseCacher; methods: collect, create_cache_key, exists, get, hash….
   - `from toolchemy.utils.cacher import CacherShelve`
 
-## `toolchemy.utils.cacher.cacher_diskcache`
-
-- **class** `DummyLock()` — (inferred) Class `DummyLock`; methods: acquire, release.
-  - `from toolchemy.utils.cacher.cacher_diskcache import DummyLock`
-
 ## `toolchemy.utils.cacher.cacher_shelve`
 
 - **function** `testing()` — (inferred) Testing — takes no arguments.
@@ -185,7 +173,7 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
   - `from toolchemy.utils.cacher.common import CacheEntrySeemMalformedError`
 - **class** `CacherInitializationError(...)` — (inferred) Class `CacherInitializationError` extends Exception.
   - `from toolchemy.utils.cacher.common import CacherInitializationError`
-- **class** `DummyLock()` — (inferred) Class `DummyLock`.
+- **class** `DummyLock()` — No-op stand-in for threading.RLock, used when thread safety is off.
   - `from toolchemy.utils.cacher.common import DummyLock`
 
 ## `toolchemy.utils.datestimes`
@@ -237,7 +225,7 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
   - `from toolchemy.utils.utils import bytes_to_str`
 - **function** `normalize_path_str(path_: str) -> str` — (inferred) Normalize path str — takes `path_: str`; returns `str`.
   - `from toolchemy.utils.utils import normalize_path_str`
-- **function** `seed_init_fn(x, only_deterministic: bool = False)` — (inferred) Seed init fn — takes `x`, `only_deterministic: bool`.
+- **function** `seed_init_fn(x)` — (inferred) Seed init fn — takes `x`.
   - `from toolchemy.utils.utils import seed_init_fn`
 - **function** `split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]` — (inferred) Split text — takes `text: str`, `chunk_size: int`, `chunk_overlap: int`; returns `list[str]`.
   - `from toolchemy.utils.utils import split_text`

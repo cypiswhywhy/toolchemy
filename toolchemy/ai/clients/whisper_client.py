@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import requests
-import sys
 import os
 import subprocess
 import tempfile
@@ -139,17 +138,3 @@ class WhisperClient:
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"ffmpeg failed to convert '{input_path}' to wav: {e.stderr.decode(errors='replace').strip()}") from e
         return temp_wav.name
-
-
-def main(argv: list):
-    if len(argv) < 2:
-        raise ValueError("Usage: python transcribe_audio.py <audio_file.mp3/wav>")
-
-    file_path = argv[1]
-    client = WhisperClient(url="tcp://hal:10300")
-    transcription = client.transcribe(file_path)
-    print(f"> '{transcription}'")
-
-
-if __name__ == "__main__":
-    main(sys.argv)

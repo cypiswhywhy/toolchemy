@@ -2,13 +2,15 @@ import logging
 from toolchemy.ai.clients.common import ILLMClient
 from toolchemy.ai.prompting.common import IPromptOptimizer, Prompt, InvalidPromptError
 from toolchemy.utils.logger import get_logger
-from toolchemy.utils.cacher import Cacher
+from toolchemy.utils.cacher import Cacher, ICacher
 
 
 class SimpleLLMPromptOptimizer(IPromptOptimizer):
-    def __init__(self, llm: ILLMClient, target_model_name: str | None = None, log_level: int = logging.INFO):
+    def __init__(self, llm: ILLMClient, target_model_name: str | None = None, log_level: int = logging.INFO,
+                 cacher: ICacher | None = None):
         self._logger = get_logger(level=log_level)
-        self._cacher = Cacher(log_level=log_level)
+        # default kept for backwards compatibility; pass a DummyCacher to avoid touching disk
+        self._cacher = cacher if cacher is not None else Cacher(log_level=log_level)
         self._llm = llm
         self._target_model_name = target_model_name or llm.name()
         self._logger.info(f"Prompt Optimizer initialized (llm: {self._llm.name()}, target model: {self._target_model_name})")

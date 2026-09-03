@@ -1,5 +1,4 @@
 import logging
-import os
 import sys
 import sqlite3
 import threading
@@ -7,9 +6,6 @@ from typing import Optional, Any
 from diskcache import Cache, FanoutCache
 
 from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError, CacheEntrySeemMalformedError, ICacher
-from toolchemy.utils.logger import get_logger
-from toolchemy.utils.locations import get_external_caller_path
-from toolchemy.utils.utils import _caller_module_name
 
 
 class DummyLock:
@@ -31,20 +27,7 @@ class CacherDiskcache(BaseCacher):
                  log_level: int = logging.INFO):
         super().__init__()
         self._thread_safe = thread_safe
-        self._disabled = disabled
-
-        self._log_level = log_level
-        self._logger = get_logger(level=self._log_level)
-
-        self._name = name
-        if not self._name:
-            self._name = _caller_module_name()
-
-        self._cache_base_dir = cache_base_dir
-        if self._cache_base_dir is None:
-            self._cache_base_dir = get_external_caller_path()
-
-        self._cache_dir = os.path.join(self._cache_base_dir, self.CACHER_MAIN_NAME, self._name)
+        self._init_common(name=name, cache_base_dir=cache_base_dir, disabled=disabled, log_level=log_level)
 
         if self._disabled:
             return
@@ -62,27 +45,15 @@ class CacherDiskcache(BaseCacher):
         except Exception as e:
             raise CacherInitializationError(f"Failed to initialize disk cache for name '{self._name}' (cache dir: '{self._cache_dir}')") from e
 
-        self._logger.debug(
-            f"Cacher '{self._name}' initialized (cache path: '{self._cache_dir}', log_level: '{logging.getLevelName(log_level)}')")
-        self._logger.debug(f"Cacher logging DEBUG level enabled")
+        self._log_initialized()
 
     @property
     def cache_location(self) -> str:
         return self._cache_dir
 
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
-        name = _caller_module_name()
-        if suffix:
-            name += f"__{suffix}"
-        if log_level is None:
-            log_level = self._log_level
-        self._logger.debug(f"Creating sub cacher")
-        self._logger.debug(f"> base cache dir: {self._cache_dir}")
-        self._logger.debug(f"> name: {name}")
-        self._logger.debug(f"> log level: {log_level} ({logging.getLevelName(log_level)})")
-        self._logger.debug(f"> is disabled: {self._disabled})")
-
-        return CacherDiskcache(name=os.path.join(self._name, name).strip("/"),
+        name, log_level = self._sub_cacher_params(log_level, suffix)
+        return CacherDiskcache(name=name,
                                cache_base_dir=self._cache_base_dir,
                                log_level=log_level, disabled=self._disabled)
 

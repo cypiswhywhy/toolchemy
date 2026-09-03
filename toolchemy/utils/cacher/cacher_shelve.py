@@ -5,9 +5,6 @@ from typing import Optional, Any
 import shelve
 
 from toolchemy.utils.cacher.common import BaseCacher, DummyLock, CacheEntryDoesNotExistError
-from toolchemy.utils.logger import get_logger
-from toolchemy.utils.locations import get_external_caller_path
-from toolchemy.utils.utils import _caller_module_name
 from toolchemy.utils.datestimes import current_unix_timestamp
 
 
@@ -15,24 +12,12 @@ class CacherShelve(BaseCacher):
     def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, disabled: bool = False,
                  log_level: int = logging.INFO, enable_thread_safeness: bool = False):
         super().__init__()
-        self._disabled = disabled
         self._enable_thread_safeness = enable_thread_safeness
         if enable_thread_safeness:
             self._lock = threading.Lock()
         else:
             self._lock = DummyLock()
-        self._log_level = log_level
-        self._logger = get_logger(level=self._log_level)
-
-        self._name = name
-        if not self._name:
-            self._name = _caller_module_name()
-
-        self._cache_base_dir = cache_base_dir
-        if self._cache_base_dir is None:
-            self._cache_base_dir = get_external_caller_path()
-
-        self._cache_dir = os.path.join(self._cache_base_dir, self.CACHER_MAIN_NAME, self._name)
+        self._init_common(name=name, cache_base_dir=cache_base_dir, disabled=disabled, log_level=log_level)
 
         if self._disabled:
             return
@@ -44,8 +29,7 @@ class CacherShelve(BaseCacher):
         if not self._enable_thread_safeness:
             self._open()
 
-        self._logger.debug(f"Cacher '{self._name}' initialized (cache path: '{self._cache_dir}', log_level: '{logging.getLevelName(log_level)}')")
-        self._logger.debug(f"Cacher logging DEBUG level enabled")
+        self._log_initialized()
 
     def _open(self):
         self._cache = shelve.open(self._cache_path, writeback=False)
@@ -55,18 +39,8 @@ class CacherShelve(BaseCacher):
         return self._cache_dir
 
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
-        name = _caller_module_name()
-        if suffix:
-            name += f"__{suffix}"
-        if log_level is None:
-            log_level = self._log_level
-        self._logger.debug(f"Creating sub cacher")
-        self._logger.debug(f"> base cache dir: {self._cache_dir}")
-        self._logger.debug(f"> name: {name}")
-        self._logger.debug(f"> log level: {log_level} ({logging.getLevelName(log_level)})")
-        self._logger.debug(f"> is disabled: {self._disabled})")
-
-        return CacherShelve(name=os.path.join(self._name, name).strip("/"),
+        name, log_level = self._sub_cacher_params(log_level, suffix)
+        return CacherShelve(name=name,
                             cache_base_dir=self._cache_base_dir,
                             log_level=log_level, disabled=self._disabled)
 

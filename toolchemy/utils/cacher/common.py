@@ -1,11 +1,21 @@
 import abc
 import hashlib
 import copy
+import logging
+import os
 from abc import abstractmethod
 from typing import Any
 
 from toolchemy.utils.at_exit_collector import ICollectable, AtExitCollector
 from toolchemy.utils.datestimes import current_date_str, current_unix_timestamp
+from toolchemy.utils.locations import get_external_caller_path
+from toolchemy.utils.logger import get_logger
+from toolchemy.utils.utils import _caller_module_name
+
+# _caller_module_name() walks the stack, so the helpers below are only correct
+# when called directly from a concrete cacher: _caller_module_name ->
+# _init_common/_sub_cacher_params -> Subclass.__init__/sub_cacher -> caller.
+_CALLER_STACK_OFFSET = 3
 
 
 class CacherInitializationError(Exception):
@@ -85,6 +95,53 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
     def label(self) -> str:
         return f"{self.__class__.__name__}({self._name})"
+
+    def _init_common(self, name: str | None, cache_base_dir: str | None, disabled: bool, log_level: int) -> None:
+        """
+        Sets up the logger, cache name and cache directory shared by every file-backed cacher.
+
+        Must be called directly from a concrete cacher's __init__: when `name` is not given it
+        falls back to the name of the module that constructed the cacher (see _CALLER_STACK_OFFSET).
+        """
+        self._disabled = disabled
+        self._log_level = log_level
+        self._logger = get_logger(level=self._log_level)
+
+        self._name = name
+        if not self._name:
+            self._name = _caller_module_name(_CALLER_STACK_OFFSET)
+
+        self._cache_base_dir = cache_base_dir
+        if self._cache_base_dir is None:
+            self._cache_base_dir = get_external_caller_path()
+
+        self._cache_dir = os.path.join(self._cache_base_dir, self.CACHER_MAIN_NAME, self._name)
+
+    def _sub_cacher_params(self, log_level: int | None, suffix: str | None) -> tuple[str, int]:
+        """
+        Builds the (name, log_level) a sub cacher is constructed with.
+
+        Must be called directly from a concrete cacher's sub_cacher(), for the same reason
+        as _init_common.
+        """
+        name = _caller_module_name(_CALLER_STACK_OFFSET)
+        if suffix:
+            name += f"__{suffix}"
+        if log_level is None:
+            log_level = self._log_level
+
+        self._logger.debug("Creating sub cacher")
+        self._logger.debug(f"> base name: {self._name}")
+        self._logger.debug(f"> base cache dir: {self._cache_dir}")
+        self._logger.debug(f"> name: {name}")
+        self._logger.debug(f"> log level: {log_level} ({logging.getLevelName(log_level)})")
+        self._logger.debug(f"> is disabled: {self._disabled})")
+
+        return os.path.join(self._name, name).strip("/"), log_level
+
+    def _log_initialized(self) -> None:
+        self._logger.debug(
+            f"Cacher '{self._name}' initialized (cache dir: '{self._cache_dir}', log_level: '{logging.getLevelName(self._log_level)}')")
 
     def exists(self, name: str) -> bool:
         does_exist = self._exists(name)

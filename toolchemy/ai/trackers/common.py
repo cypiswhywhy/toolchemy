@@ -76,7 +76,6 @@ class ITracker(ABC):
              save_path (str): the run-relative artifact file path in posixpath format to which
                               the figure is saved (e.g. "dir/file.png").
         """
-        pass
 
     @abstractmethod
     def set_run_tag(self, name: str, value: str | int | float):

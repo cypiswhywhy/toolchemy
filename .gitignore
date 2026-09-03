@@ -1,2 +1,7 @@
 /.cache
 /resources/tests/prompts_mlflow/registry.db
+
+# coverage.py artifacts (make test-cov)
+/.coverage
+/.coverage.*
+/htmlcov/

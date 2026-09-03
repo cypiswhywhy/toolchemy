@@ -28,6 +28,10 @@ def create_llm(name: str, uri: str | None = None, api_key: str | None = None, de
             raise ValueError("you must pass the 'api_key' explicitly as parameter for this function.")
         return OpenAIClient(model_name=name, api_key=api_key, system_prompt=system_prompt, default_model_config=default_model_config, no_cache=no_cache)
 
+    if uri == URI_DUMMY:
+        return DummyModelClient(name=name, system_prompt=system_prompt, default_model_config=default_model_config,
+                                disable_cache=no_cache, log_level=log_level)
+
     if uri == URI_GEMINI:
         if not api_key:
             raise ValueError("you must pass the 'api_key' explicitly as parameter for this function.")

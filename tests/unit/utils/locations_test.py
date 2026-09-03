@@ -1,4 +1,6 @@
+import importlib.util
 import json
+import sys
 import pytest
 import tempfile
 import os
@@ -179,3 +181,36 @@ def test_project_rel(path: str, expected_path: str):
     rel_path = locations.project_rel(path)
 
     assert rel_path == expected_path
+
+
+def _write_caller_module(directory: Path) -> Path:
+    directory.mkdir(parents=True, exist_ok=True)
+    module_path = directory / "caller.py"
+    module_path.write_text(
+        "from toolchemy.utils.locations import get_external_caller_path\n"
+        "def resolve():\n"
+        "    return get_external_caller_path()\n"
+    )
+    return module_path
+
+
+def _load_and_resolve(module_path: Path, module_name: str) -> str:
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        return module.resolve()
+    finally:
+        del sys.modules[module_name]
+
+
+@pytest.mark.parametrize("sub_dir,module_name", [("", "caller_at_root"), ("pkg", "caller_in_pkg")])
+def test_get_external_caller_path_finds_the_callers_own_project_root(sub_dir: str, module_name: str):
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        project_dir = Path(tmp_dir).resolve() / "proj"
+        project_dir.mkdir()
+        (project_dir / "pyproject.toml").touch()
+        module_path = _write_caller_module(project_dir / sub_dir if sub_dir else project_dir)
+
+        assert _load_and_resolve(module_path, module_name) == str(project_dir)

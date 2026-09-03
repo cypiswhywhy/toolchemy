@@ -4,7 +4,7 @@ import threading
 from typing import Optional, Any
 import shelve
 
-from toolchemy.utils.cacher.common import BaseCacher, DummyLock, CacheEntryDoesNotExistError
+from toolchemy.utils.cacher.common import BaseCacher, DummyLock, CacheEntryDoesNotExistError, ICacher
 from toolchemy.utils.datestimes import current_unix_timestamp
 
 

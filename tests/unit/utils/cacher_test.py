@@ -5,10 +5,11 @@ import os
 import random
 import string
 import threading
+import typing
 from datetime import datetime
 from unittest.mock import patch
 
-from toolchemy.utils.cacher import BaseCacher, CacherPickle, CacherDiskcache, CacheEntryDoesNotExistError, CacherShelve
+from toolchemy.utils.cacher import BaseCacher, CacherPickle, CacherDiskcache, CacheEntryDoesNotExistError, CacherShelve, ICacher
 
 
 @pytest.mark.parametrize("parts_plain,parts_hashed,with_current_date,expected_key", [
@@ -255,3 +256,8 @@ def test_pickle_set_with_unpicklable_content_raises_typeerror_and_removes_the_pa
 
         assert not cacher.exists("broken")
         cacher.persist()
+
+
+@pytest.mark.parametrize("cacher_class", [CacherPickle, CacherShelve, CacherDiskcache])
+def test_sub_cacher_return_annotation_resolves(cacher_class):
+    assert typing.get_type_hints(cacher_class.sub_cacher)["return"] is ICacher

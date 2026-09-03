@@ -26,7 +26,7 @@ def get_external_caller_path(exclude_prefixes=None) -> str:
 
         path = Path(module.__file__).resolve()
         if all(not str(path).startswith(prefix) for prefix in exclude_prefixes):
-            project_root_path = str(_find_project_root(path.parents[1]))
+            project_root_path = str(_find_project_root(path.parent))
             if "site-packages" in project_root_path:
                 return str(Path.cwd())
             return project_root_path

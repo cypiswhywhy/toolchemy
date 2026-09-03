@@ -66,7 +66,7 @@ class NeptuneAITracker(TrackerBase):
     def log(self, name: str, value: Any):
         if self._disabled:
             return
-        raise NotImplemented()
+        raise NotImplementedError
 
     def log_param(self, name: str, val, step: Optional[int] = None):
         if self._disabled:

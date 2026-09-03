@@ -172,7 +172,11 @@ def test_abs(rel_path: str, expected_path: str):
     ("{root}/path.txt", "./path.txt"),
     ("{root}/abs/path.txt", "./abs/path.txt"),
     ("{root}/abs/subdir/path.txt", "./abs/subdir/path.txt"),
-    ("{root}/abs/subdir/path.txt", "./abs/subdir/path.txt"),
+    # the root is a path prefix, not a substring: neither of these is inside it
+    ("{root}2/path.txt", "{root}2/path.txt"),
+    ("/etc/hosts", "/etc/hosts"),
+    # ... and a root that occurs again further down stays part of the relative path
+    ("{root}{root}/path.txt", ".{root}/path.txt"),
 ])
 def test_project_rel(path: str, expected_path: str):
     root_path = os.getcwd().rstrip("/")
@@ -180,7 +184,14 @@ def test_project_rel(path: str, expected_path: str):
     locations = Locations(root_path=root_path)
     rel_path = locations.project_rel(path)
 
-    assert rel_path == expected_path
+    assert rel_path == expected_path.format(root=root_path)
+
+
+def test_project_rel_in_objective_path_mode_returns_a_path():
+    root_path = os.getcwd().rstrip("/")
+    locations = Locations(root_path=root_path, objective_path_mode=True)
+
+    assert locations.project_rel(os.path.join(root_path, "abs", "path.txt")) == Path("abs/path.txt")
 
 
 def _write_caller_module(directory: Path) -> Path:

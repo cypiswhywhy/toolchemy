@@ -19,13 +19,10 @@ MEGABYTE = 1024 ** 2
 GIGABYTE = 1024 ** 3
 
 
-def seed_init_fn(x, only_deterministic: bool = False):
+def seed_init_fn(x):
     seed = DEFAULT_SEED + x
     np.random.seed(seed)
     random.seed(seed)
-    # torch.manual_seed(seed)
-    # if only_deterministic:
-    #     torch.use_deterministic_algorithms(True)
 
 
 def bytes_to_str(byte_data: bytes) -> str:

@@ -62,10 +62,6 @@ class Usage:
     duration: float
     cached: bool = False
 
-    def __eq__(self, other: "Usage"):
-        return (other.input_tokens == self.input_tokens and other.output_tokens == self.output_tokens
-                and other.duration == self.duration and other.duration == self.duration)
-
 
 class ILLMClient(ABC):
     @abstractmethod
@@ -245,7 +241,7 @@ Malformed JSON object:
         if base_config.model_name is None:
             if default_model_name is None:
                 raise RuntimeError("Model name or default model must be set")
-            base_config.model_name = self._model_name
+            base_config.model_name = default_model_name
         return base_config
 
     @abstractmethod

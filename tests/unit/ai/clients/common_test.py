@@ -1,4 +1,5 @@
 from toolchemy.ai.clients import ModelConfig, prepare_chat_messages
+from toolchemy.ai.clients.common import LLMClientBase, Usage
 from toolchemy.utils.utils import ff
 
 
@@ -124,3 +125,27 @@ def test_prepare_chat_messages_does_not_mutate_the_history_argument_with_system_
     prepare_chat_messages(prompt="bar", system_prompt="system_prompt", messages_history=history)
 
     assert history == history_before
+
+
+def test_usage_equality_covers_every_field():
+    base = Usage(input_tokens=1, output_tokens=2, duration=3.0)
+
+    assert base == Usage(input_tokens=1, output_tokens=2, duration=3.0)
+    assert base != Usage(input_tokens=9, output_tokens=2, duration=3.0)
+    assert base != Usage(input_tokens=1, output_tokens=9, duration=3.0)
+    assert base != Usage(input_tokens=1, output_tokens=2, duration=9.0)
+    assert base != Usage(input_tokens=1, output_tokens=2, duration=3.0, cached=True)
+
+
+def test_model_config_uses_the_default_model_name_it_is_given():
+    class _Client(LLMClientBase):
+        def _completion(self, prompt, system_prompt, model_config=None, images_base64=None):
+            raise NotImplementedError
+
+        def embeddings(self, text: str) -> list[float]:
+            raise NotImplementedError
+
+    client = _Client(default_model_name="model-A", disable_cache=True)
+
+    assert client.model_config(default_model_name="model-B").model_name == "model-B"
+    assert client.name() == "model-A"

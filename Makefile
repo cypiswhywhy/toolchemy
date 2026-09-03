@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help lint test test-cov test-all test-perf docs-agents _publish publish
+.PHONY: help lint test test-cov test-all test-int test-perf docs-agents _publish publish
 
 help:
 	@echo "Available targets:"
@@ -15,8 +15,11 @@ test:                            ## Run all unit tests
 test-cov:                        ## Run unit tests with a branch-coverage report
 	poetry run pytest ./tests/unit --cov=toolchemy --cov-branch --cov-report=term-missing
 
-test-all:                       ## Run all tests
-	poetry run pytest ./tests
+test-all:                        ## Run every test that needs no external service
+	poetry run pytest ./tests -m "not integration"
+
+test-int:                        ## Run integration tests (needs TOOLCHEMY_WHISPER_URL and a live server)
+	poetry run pytest ./tests/int -m integration
 
 test-perf:                       ## Run perf tests
 	poetry run pytest ./tests/perf

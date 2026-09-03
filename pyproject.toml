@@ -54,6 +54,11 @@ deepdiff = "^8.6.1"
 pytest-cov = "^7.0.0"
 ruff = "^0.15.4"
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: needs a live external service; deselected by `make test-all`, run with `make test-int`",
+]
+
 [tool.ruff]
 line-length = 160
 target-version = "py312"

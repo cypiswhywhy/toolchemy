@@ -1,6 +1,6 @@
 import pytest
 import tempfile
-from toolchemy.utils.cacher import ICacher, CacherPickle, CacherShelve, CacherDiskcache
+from toolchemy.utils.cacher import ICacher, BaseCacher, CacherPickle, CacherShelve, CacherDiskcache
 
 DATA_COUNT = 100
 DATA_SIZE = 100
@@ -372,3 +372,18 @@ def test_diskcache_t_safe_fanout_exists_large(benchmark, input_data_large):
         _prefill_cacher(cacher=cacher, input_data=input_data_large)
         benchmark(benchmark_exists, cacher=cacher, item_count=len(input_data_large))
         cacher.persist()
+
+
+# create_cache_key sits on the hot path of every cached completion. Its plain-part
+# sanitiser runs one str.replace per replaceable character, which looks quadratic but
+# measures faster than str.translate, because replace short-circuits on absent chars.
+# These benchmarks exist so that trade-off can be re-checked with data rather than by eye.
+@pytest.mark.benchmark(group="cache_key")
+def test_create_cache_key_short(benchmark):
+    benchmark(BaseCacher.create_cache_key, ["llm_completion_json"], ["system prompt", "prompt"])
+
+
+@pytest.mark.benchmark(group="cache_key")
+def test_create_cache_key_long_plain_part(benchmark):
+    long_part = "Summarize the following document, keeping names, dates and figures intact. " * 20
+    benchmark(BaseCacher.create_cache_key, [long_part], ["system prompt", "prompt"])

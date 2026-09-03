@@ -211,8 +211,16 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
 
 class DummyLock:
-    def __enter__(self):
+    """No-op stand-in for threading.RLock, used when thread safety is off."""
+
+    def acquire(self, blocking: bool = False, timeout: int = -1) -> bool:
+        return False
+
+    def release(self):
         pass
+
+    def __enter__(self):
+        return None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass

@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import patch, call
+from jsonschema import ValidationError
 from tenacity import RetryError
 
 from toolchemy.ai.clients.common import ModelResponseError
@@ -259,20 +260,24 @@ def test_completion_json(client_class_mock, client_class_mock_return_values, mod
 @patch("toolchemy.ai.clients.ollama_client.Client")
 def test_completion_json_invalid_schema(client_class_mock):
     expected_model_name = "dummy-model"
-    expected_response = {"expected": "response"}
     prompt = "test"
 
     expected_model_config = ModelConfig()
-    client_class_mock_return_values = "{\"expected\": \"response\"}"
-    validation_schema = {"type": "object", "properties": {"unexpected": {"type": "string"}}}
+    # a list, not a bare string: iterating the string fed `generate` one character per call,
+    # so this exercised the malformed-JSON path and never reached schema validation
+    client_class_mock_return_values = ["{\"expected\": \"response\"}", "{\"expected\": \"response\"}"]
+    validation_schema = {"type": "object", "required": ["unexpected"], "properties": {"unexpected": {"type": "string"}}}
 
     mock_client = client_class_mock.return_value
     mock_client.generate.side_effect = [_OllamaClientGenerateResponse(client_response) for client_response in client_class_mock_return_values]
 
     client = OllamaClient(uri="http://uri", model_name=expected_model_name, disable_cache=True, retry_min_wait=1, retry_attempts=2, fix_malformed_json=False)
 
-    with pytest.raises(RetryError):
+    with pytest.raises(RetryError) as exc_info:
         _ = client.completion_json(prompt=prompt, model_config=expected_model_config, validation_schema=validation_schema)
+
+    # the response parsed cleanly; it is the schema that rejected it
+    assert isinstance(exc_info.value.last_attempt.exception(), ValidationError)
 
 
 @pytest.mark.parametrize("client_class_mock_return_values", [

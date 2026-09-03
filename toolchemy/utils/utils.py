@@ -55,10 +55,12 @@ def pp_cast(msg: Any, skip_fields: list | None = None) -> Any:
     if isinstance(msg_copy, np.ndarray):
         msg_copy = pp_cast(msg_copy.tolist(), skip_fields=skip_fields)
     if isinstance(msg_copy, float):
-        msg_copy = ff(msg)
+        msg_copy = ff(msg_copy)
     if isinstance(msg_copy, datetime.datetime):
         msg_copy = datetime_to_str(msg_copy)
-    if isinstance(msg_copy, object) and type(msg_copy).__module__ != "builtins":
+    # every value is an `object`, so the module check is the whole condition:
+    # anything not built-in gets rendered through its __dict__
+    if type(msg_copy).__module__ != "builtins":
         msg_copy = json.loads(json.dumps(msg_copy, default=vars))
     return msg_copy
 
@@ -70,12 +72,11 @@ def pp(msg: str | dict | float | int | list, skip_fields: list | None = None, pr
     if isinstance(msg_, list):
         if len(msg_) > 0 and isinstance(msg_[0], dict):
             msg_ = json.dumps(msg_, indent=4, ensure_ascii=False)
-    if isinstance(msg_, int) or isinstance(msg_, float):
+    if isinstance(msg_, (int, float)):
         msg_ = ff(msg_)
     if print_msg:
         print(msg_)
     return msg_
-
 
 
 def ff(fval: float | list[float] | int | list[int] | dict | str | np.float32, precision: int = 2):
@@ -141,6 +142,9 @@ def normalize_path_str(path_: str) -> str:
 
 
 def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
+    if chunk_size <= chunk_overlap:
+        raise ValueError(f"chunk_size ({chunk_size}) must be greater than chunk_overlap ({chunk_overlap})")
+
     num_chunks = (len(text) - chunk_overlap) // (chunk_size - chunk_overlap)
 
     chunks = []
@@ -157,7 +161,7 @@ def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
 def truncate(s: str, limit: int) -> str:
     if len(s) <= limit:
         return s
-    return f"{s[:limit]} (...{str(len(s) - limit)} more chars)"
+    return f"{s[:limit]} (...{len(s) - limit!s} more chars)"
 
 
 def batchize(items: list[Any], batch_size: int)-> list[list[Any]]:

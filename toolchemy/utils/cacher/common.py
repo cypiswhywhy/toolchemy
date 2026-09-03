@@ -1,11 +1,21 @@
 import abc
 import hashlib
 import copy
+import logging
+import os
 from abc import abstractmethod
 from typing import Any
 
 from toolchemy.utils.at_exit_collector import ICollectable, AtExitCollector
 from toolchemy.utils.datestimes import current_date_str, current_unix_timestamp
+from toolchemy.utils.locations import get_external_caller_path
+from toolchemy.utils.logger import get_logger
+from toolchemy.utils.utils import _caller_module_name
+
+# _caller_module_name() walks the stack, so the helpers below are only correct
+# when called directly from a concrete cacher: _caller_module_name ->
+# _init_common/_sub_cacher_params -> Subclass.__init__/sub_cacher -> caller.
+_CALLER_STACK_OFFSET = 3
 
 
 class CacherInitializationError(Exception):
@@ -25,11 +35,11 @@ class CacheEntrySeemMalformedError(Exception):
 
 
 class ICacher(abc.ABC):
-    CACHER_MAIN_NAME = ".cache"
-
     """
     Cacher interface
     """
+
+    CACHER_MAIN_NAME = ".cache"
 
     @abstractmethod
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
@@ -86,6 +96,53 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
     def label(self) -> str:
         return f"{self.__class__.__name__}({self._name})"
 
+    def _init_common(self, name: str | None, cache_base_dir: str | None, disabled: bool, log_level: int) -> None:
+        """
+        Sets up the logger, cache name and cache directory shared by every file-backed cacher.
+
+        Must be called directly from a concrete cacher's __init__: when `name` is not given it
+        falls back to the name of the module that constructed the cacher (see _CALLER_STACK_OFFSET).
+        """
+        self._disabled = disabled
+        self._log_level = log_level
+        self._logger = get_logger(level=self._log_level)
+
+        self._name = name
+        if not self._name:
+            self._name = _caller_module_name(_CALLER_STACK_OFFSET)
+
+        self._cache_base_dir = cache_base_dir
+        if self._cache_base_dir is None:
+            self._cache_base_dir = get_external_caller_path()
+
+        self._cache_dir = os.path.join(self._cache_base_dir, self.CACHER_MAIN_NAME, self._name)
+
+    def _sub_cacher_params(self, log_level: int | None, suffix: str | None) -> tuple[str, int]:
+        """
+        Builds the (name, log_level) a sub cacher is constructed with.
+
+        Must be called directly from a concrete cacher's sub_cacher(), for the same reason
+        as _init_common.
+        """
+        name = _caller_module_name(_CALLER_STACK_OFFSET)
+        if suffix:
+            name += f"__{suffix}"
+        if log_level is None:
+            log_level = self._log_level
+
+        self._logger.debug("Creating sub cacher")
+        self._logger.debug(f"> base name: {self._name}")
+        self._logger.debug(f"> base cache dir: {self._cache_dir}")
+        self._logger.debug(f"> name: {name}")
+        self._logger.debug(f"> log level: {log_level} ({logging.getLevelName(log_level)})")
+        self._logger.debug(f"> is disabled: {self._disabled})")
+
+        return os.path.join(self._name, name).strip("/"), log_level
+
+    def _log_initialized(self) -> None:
+        self._logger.debug(
+            f"Cacher '{self._name}' initialized (cache dir: '{self._cache_dir}', log_level: '{logging.getLevelName(self._log_level)}')")
+
     def exists(self, name: str) -> bool:
         does_exist = self._exists(name)
         if does_exist:
@@ -105,7 +162,10 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
 
     @staticmethod
     def hash(name: str) -> str:
-        hash_object = hashlib.md5(name.encode('utf-8'))
+        # md5 is used to shorten cache key components, never as a security primitive.
+        # usedforsecurity=False states that and keeps this working on FIPS builds;
+        # it does not change the digest, so existing cache entries stay addressable.
+        hash_object = hashlib.md5(name.encode('utf-8'), usedforsecurity=False)
         return hash_object.hexdigest()
 
     @staticmethod
@@ -113,7 +173,7 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
                          with_current_date: bool = False) -> str:
         replaceable_chars = "*.,'\"|<>[]?!-:;()@#$%^&{} "
         if parts_plain is None and parts_hashed is None:
-            raise ValueError(f"You must provide the key components")
+            raise ValueError("You must provide the key components")
         if parts_plain is None:
             parts_plain = []
         if parts_hashed is None:
@@ -127,12 +187,17 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
         if isinstance(parts_hashed, dict):
             parts_hashed = [f"{k}_{v}" for k, v in parts_hashed.items()]
 
-        for i, part_plain in enumerate(parts_plain):
-            for char_to_replace in list(replaceable_chars):
-                parts_plain[i] = str(parts_plain[i]).replace(char_to_replace, "_")
+        # build a new list rather than assigning into parts_plain: when the caller passes a
+        # list it is theirs, and rewriting its elements in place is a side effect on their data
+        sanitized_plain = []
+        for part_plain in parts_plain:
+            sanitized = str(part_plain)
+            for char_to_replace in replaceable_chars:
+                sanitized = sanitized.replace(char_to_replace, "_")
+            sanitized_plain.append(sanitized)
 
         parts_hashed = [BaseCacher.hash(str(part_hashed)) for part_hashed in parts_hashed]
-        parts = parts_plain + parts_hashed
+        parts = sanitized_plain + parts_hashed
         if with_current_date:
             parts.append(current_date_str("%Y%m%d"))
 

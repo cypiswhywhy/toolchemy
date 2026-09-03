@@ -56,8 +56,8 @@ class Prompt:
 
     @classmethod
     def from_json(cls, data: dict) -> "Prompt":
-        return cls(system=data.get("system", None), user=data.get("user", None), template_system=data.get("template_system", None),
-                   template_user=data.get("template_user", None))
+        return cls(system=data.get("system"), user=data.get("user"), template_system=data.get("template_system"),
+                   template_user=data.get("template_user"))
 
 
 class IPrompter(ABC):

@@ -6,7 +6,6 @@ from tenacity import wait_exponential, Retrying, stop_after_attempt
 from tenacity import RetryCallState
 from dataclasses import dataclass
 from json import JSONDecodeError
-from json.decoder import JSONDecodeError as JSONDecoderDecodeError
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from typing import TypedDict, NotRequired
@@ -62,9 +61,6 @@ class Usage:
     output_tokens: int
     duration: float
     cached: bool = False
-
-    def __eq__(self, other: "Usage"):
-        return other.input_tokens == self.input_tokens and other.output_tokens == self.output_tokens and other.duration == self.duration and other.duration == self.duration
 
 
 class ILLMClient(ABC):
@@ -215,7 +211,8 @@ Malformed JSON object:
         total_usage["total_tokens"] = total_usage["input_tokens"] + total_usage["output_tokens"]
         total_usage["cached_total_tokens"] = total_usage["cached_input_tokens"] + total_usage["cached_output_tokens"]
         total_usage["duration_avg"] = float(total_usage["duration"] / total_usage["request_count"]) if total_usage["request_count"] else 0.0
-        total_usage["cached_duration_avg"] = float(total_usage["cached_duration"] / total_usage["cached_request_count"]) if total_usage["cached_request_count"] else 0.0
+        total_usage["cached_duration_avg"] = (float(total_usage["cached_duration"] / total_usage["cached_request_count"])
+                                              if total_usage["cached_request_count"] else 0.0)
 
         return total_usage
 
@@ -243,8 +240,8 @@ Malformed JSON object:
             base_config = self._default_model_config.model_copy()
         if base_config.model_name is None:
             if default_model_name is None:
-                raise RuntimeError(f"Model name or default model must be set")
-            base_config.model_name = self._model_name
+                raise RuntimeError("Model name or default model must be set")
+            base_config.model_name = default_model_name
         return base_config
 
     @abstractmethod
@@ -276,14 +273,25 @@ Malformed JSON object:
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
         model_cfg = self.model_config(model_config, self._model_name)
         system_prompt = system_prompt or self._system_prompt
-        self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
+        self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, "
+                           f"temp: {model_cfg.temperature}, top_p: {model_cfg.top_p})")
         self._logger.debug(f"> Model config (mod): model: {model_cfg.model_name}, max_new_tokens: {model_cfg.max_new_tokens}, temp: {model_cfg.temperature}")
 
+        return self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_cfg,
+                                       images_base64=images_base64, no_cache=no_cache, cache_only=cache_only,
+                                       is_json=True, validation_schema=validation_schema)
+
+    def _cached_completion(self, prompt: str, system_prompt: str | None, model_config: ModelConfig,
+                           images_base64: list[str] | None, no_cache: bool, cache_only: bool,
+                           is_json: bool, validation_schema: dict | None = None) -> str | dict | list[dict]:
+        """
+        Shared cache-lookup / retry / cache-store path behind completion() and completion_json().
+        """
         cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
-                                                                 model_config=model_cfg, images_base64=images_base64,
-                                                                 is_json=True)
+                                                                 model_config=model_config, images_base64=images_base64,
+                                                                 is_json=is_json)
         if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
-            self._logger.debug(f"Cache for completion_json already exists ('{cache_key}')")
+            self._logger.debug(f"Cache for the prompt already exists ('{cache_key}')")
             usage = self._cacher.get(cache_key_usage)
             usage.cached = True
             self._usages.append(usage)
@@ -292,25 +300,32 @@ Malformed JSON object:
         if cache_only:
             raise LLMCacheDoesNotExist()
 
-        self._logger.debug(f"Cache for completion_json does not exists, generating new response")
+        self._logger.debug("Cache for the prompt does not exist, generating a new response")
 
         try:
-            response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
-                                                 model_config=model_cfg,
-                                                 images_base64=images_base64,
-                                                 validation_schema=validation_schema)
+            if is_json:
+                response, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
+                                                model_config=model_config,
+                                                images_base64=images_base64,
+                                                validation_schema=validation_schema)
+            else:
+                response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
+                                                model_config=model_config,
+                                                images_base64=images_base64)
         except Exception:
-            self._logger.error(f"> system prompt: {system_prompt}")
-            self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_cfg.raw()}")
+            self._logger.exception(f"Completion failed\n"
+                                   f"> system prompt: {system_prompt}\n"
+                                   f"> prompt: {prompt}\n"
+                                   f"> model config: {model_config.raw()}")
             raise
+
         self._usages.append(usage)
 
         if not no_cache:
-            self._cacher.set(cache_key, response_json)
+            self._cacher.set(cache_key, response)
             self._cacher.set(cache_key_usage, usage)
 
-        return response_json
+        return response
 
     def _before_sleep_log(self, retry_state: RetryCallState) -> None:
         if retry_state.outcome is None or retry_state.next_action is None:
@@ -359,11 +374,11 @@ Malformed JSON object:
             if validation_schema:
                 try:
                     validate(instance=response_json, schema=validation_schema)
-                except ValidationError as e:
-                    self._logger.error(f"Invalid schema: {e}")
-                    raise e
+                except ValidationError:
+                    self._logger.exception("Response failed schema validation")
+                    raise
 
-        except (JSONDecodeError, JSONDecoderDecodeError) as e:
+        except JSONDecodeError as e:
             if self._fix_malformed_json and self._fix_json_prompt_template:
                 self._logger.warning("Malformed JSON, trying to fix it...")
                 self._logger.warning(f"Malformed JSON:\n'{response_str}'")
@@ -371,9 +386,9 @@ Malformed JSON object:
                 response_json = self.completion_json(fix_json_prompt)
                 self._logger.debug(f"Fixed JSON:\n{response_json}")
             if response_json is None:
-                self._logger.error(f"Invalid JSON:\n{truncate(response_str, self._truncate_log_messages_to)}\n")
-                self._logger.error(f"> prompt:\n{truncate(prompt, self._truncate_log_messages_to)}")
-                raise e
+                self._logger.exception(f"Invalid JSON:\n{truncate(response_str, self._truncate_log_messages_to)}\n"
+                                       f"> prompt:\n{truncate(prompt, self._truncate_log_messages_to)}")
+                raise
 
         return response_json, usage
 
@@ -382,7 +397,7 @@ Malformed JSON object:
         try:
             content = json.loads(json_str)
             return content
-        except (JSONDecodeError, JSONDecodeError) as e:
+        except JSONDecodeError:
             pass
 
         lines = [line.strip() for line in json_str.strip().split('\n') if line.strip()]
@@ -408,36 +423,11 @@ Malformed JSON object:
         system_prompt = system_prompt or self._system_prompt
         self._logger.debug(f"Completion started (model: {model_config.model_name})")
 
-        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
-                                                                 model_config=model_config, images_base64=images_base64,
-                                                                 is_json=False)
-        if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
-            self._logger.debug(f"Cache for the prompt already exists ('{cache_key}')")
-            usage_cached = self._cacher.get(cache_key_usage)
-            usage_cached.cached = True
-            self._usages.append(usage_cached)
-            return self._cacher.get(cache_key)
+        response = self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_config,
+                                           images_base64=images_base64, no_cache=no_cache, cache_only=cache_only,
+                                           is_json=False)
 
-        if cache_only:
-            raise LLMCacheDoesNotExist()
-
-        try:
-            response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
-                                        model_config=model_config,
-                                        images_base64=images_base64)
-        except Exception:
-            self._logger.error(f"> system prompt: {system_prompt}")
-            self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_config.raw()}")
-            raise
-
-        self._usages.append(usage)
-
-        if not no_cache:
-            self._cacher.set(cache_key, response)
-            self._cacher.set(cache_key_usage, usage)
-
-        self._logger.debug(f"Completion done.")
+        self._logger.debug("Completion done.")
 
         return response
 
@@ -457,10 +447,12 @@ Malformed JSON object:
 
 def prepare_chat_messages(prompt: str, system_prompt: str | None = None, images_base64: list[str] | None = None,
                           messages_history: list[ChatMessage] | None = None, envelope: bool = False) -> list[ChatMessage] | ChatMessages:
-    messages_all = messages_history or []
+    # copy: the user message is appended below, and appending to the caller's own
+    # history list would grow it on every call
+    messages_all = list(messages_history) if messages_history else []
     if system_prompt:
         if messages_all and len(messages_all) > 0:
-            if not messages_all[0]["role"] == "system":
+            if messages_all[0]["role"] != "system":
                 messages_all = [{"role": "system", "content": system_prompt}] + messages_all
         else:
             messages_all = [{"role": "system", "content": system_prompt}]

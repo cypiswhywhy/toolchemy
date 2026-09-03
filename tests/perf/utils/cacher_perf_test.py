@@ -1,6 +1,6 @@
 import pytest
 import tempfile
-from toolchemy.utils.cacher import ICacher, CacherPickle, CacherShelve, CacherDiskcache
+from toolchemy.utils.cacher import ICacher, BaseCacher, CacherPickle, CacherShelve, CacherDiskcache
 
 DATA_COUNT = 100
 DATA_SIZE = 100
@@ -14,7 +14,7 @@ def _generate_input_data(item_count: int, item_size: int) -> list[dict]:
     for i in range(item_count):
         entry = {}
         for j in range(item_size):
-            entry[f"entry_{str(i)}_{str(j)}"] = f"value_{str(i)}_{j}"
+            entry[f"entry_{i!s}_{j!s}"] = f"value_{i!s}_{j}"
         data.append(entry)
     return data
 
@@ -30,22 +30,22 @@ def input_data_large():
 
 def benchmark_set(cacher: ICacher, data: list):
     for i, item in enumerate(data):
-        cacher.set(f"cache_key_{str(i)}", item)
+        cacher.set(f"cache_key_{i!s}", item)
 
 
 def benchmark_get(cacher: ICacher, item_count: int):
     for i in range(item_count):
-        _ = cacher.get(f"entry_{str(i)}")
+        _ = cacher.get(f"entry_{i!s}")
 
 
 def benchmark_exists(cacher: ICacher, item_count: int):
     for i in range(item_count):
-        cacher.exists(f"entry_{str(i)}")
+        cacher.exists(f"entry_{i!s}")
 
 
 def _prefill_cacher(cacher: ICacher, input_data):
     for i, entry in enumerate(input_data):
-        cacher.set(f"entry_{str(i)}", entry)
+        cacher.set(f"entry_{i!s}", entry)
 
 
 @pytest.mark.benchmark(group="set")
@@ -157,7 +157,7 @@ def test_diskcache_t_safe_set_large(benchmark, input_data_large):
 
 
 @pytest.mark.benchmark(group="set_large")
-def test_diskcache_t_safe_set_large(benchmark, input_data_large):
+def test_diskcache_t_safe_fanout_set_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         benchmark(benchmark_set, cacher=cacher, data=input_data_large)
@@ -278,7 +278,7 @@ def test_diskcache_t_safe_get_large(benchmark, input_data_large):
 
 
 @pytest.mark.benchmark(group="get_large")
-def test_diskcache_t_safe_get_large(benchmark, input_data_large):
+def test_diskcache_t_safe_fanout_get_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         _prefill_cacher(cacher=cacher, input_data=input_data_large)
@@ -372,3 +372,18 @@ def test_diskcache_t_safe_fanout_exists_large(benchmark, input_data_large):
         _prefill_cacher(cacher=cacher, input_data=input_data_large)
         benchmark(benchmark_exists, cacher=cacher, item_count=len(input_data_large))
         cacher.persist()
+
+
+# create_cache_key sits on the hot path of every cached completion. Its plain-part
+# sanitiser runs one str.replace per replaceable character, which looks quadratic but
+# measures faster than str.translate, because replace short-circuits on absent chars.
+# These benchmarks exist so that trade-off can be re-checked with data rather than by eye.
+@pytest.mark.benchmark(group="cache_key")
+def test_create_cache_key_short(benchmark):
+    benchmark(BaseCacher.create_cache_key, ["llm_completion_json"], ["system prompt", "prompt"])
+
+
+@pytest.mark.benchmark(group="cache_key")
+def test_create_cache_key_long_plain_part(benchmark):
+    long_part = "Summarize the following document, keeping names, dates and figures intact. " * 20
+    benchmark(BaseCacher.create_cache_key, [long_part], ["system prompt", "prompt"])

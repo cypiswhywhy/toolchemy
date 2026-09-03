@@ -15,7 +15,6 @@ class MLFlowTrackerTest(TestCase):
         self.expected_run_id = "111"
         self.mlflow_client_mock.create_run.return_value = mock.Mock(info=mock.Mock(run_id=self.expected_run_id, run_name="main"))
         self.sut.start_run("main")
-        # self.sut._active_run_id = self.expected_run_id
         self.sut._get_git_username = lambda: None
 
     def tearDown(self):

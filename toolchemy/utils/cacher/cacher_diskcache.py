@@ -1,15 +1,12 @@
 import logging
-import os
 import sys
 import sqlite3
 import threading
 from typing import Optional, Any
 from diskcache import Cache, FanoutCache
 
-from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError, CacheEntrySeemMalformedError, ICacher
-from toolchemy.utils.logger import get_logger
-from toolchemy.utils.locations import get_external_caller_path
-from toolchemy.utils.utils import _caller_module_name
+from toolchemy.utils.cacher.common import (BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError,
+                                           CacherInitializationError, CacheEntrySeemMalformedError, ICacher)
 
 
 class DummyLock:
@@ -27,24 +24,11 @@ class DummyLock:
 
 
 class CacherDiskcache(BaseCacher):
-    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, shards: int = 1, timeout: int = 30, thread_safe: bool = False, disabled: bool = False,
-                 log_level: int = logging.INFO):
+    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, shards: int = 1, timeout: int = 30,
+                 thread_safe: bool = False, disabled: bool = False, log_level: int = logging.INFO):
         super().__init__()
         self._thread_safe = thread_safe
-        self._disabled = disabled
-
-        self._log_level = log_level
-        self._logger = get_logger(level=self._log_level)
-
-        self._name = name
-        if not self._name:
-            self._name = _caller_module_name()
-
-        self._cache_base_dir = cache_base_dir
-        if self._cache_base_dir is None:
-            self._cache_base_dir = get_external_caller_path()
-
-        self._cache_dir = os.path.join(self._cache_base_dir, self.CACHER_MAIN_NAME, self._name)
+        self._init_common(name=name, cache_base_dir=cache_base_dir, disabled=disabled, log_level=log_level)
 
         if self._disabled:
             return
@@ -62,27 +46,15 @@ class CacherDiskcache(BaseCacher):
         except Exception as e:
             raise CacherInitializationError(f"Failed to initialize disk cache for name '{self._name}' (cache dir: '{self._cache_dir}')") from e
 
-        self._logger.debug(
-            f"Cacher '{self._name}' initialized (cache path: '{self._cache_dir}', log_level: '{logging.getLevelName(log_level)}')")
-        self._logger.debug(f"Cacher logging DEBUG level enabled")
+        self._log_initialized()
 
     @property
     def cache_location(self) -> str:
         return self._cache_dir
 
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
-        name = _caller_module_name()
-        if suffix:
-            name += f"__{suffix}"
-        if log_level is None:
-            log_level = self._log_level
-        self._logger.debug(f"Creating sub cacher")
-        self._logger.debug(f"> base cache dir: {self._cache_dir}")
-        self._logger.debug(f"> name: {name}")
-        self._logger.debug(f"> log level: {log_level} ({logging.getLevelName(log_level)})")
-        self._logger.debug(f"> is disabled: {self._disabled})")
-
-        return CacherDiskcache(name=os.path.join(self._name, name).strip("/"),
+        name, log_level = self._sub_cacher_params(log_level, suffix)
+        return CacherDiskcache(name=name,
                                cache_base_dir=self._cache_base_dir,
                                log_level=log_level, disabled=self._disabled)
 
@@ -96,7 +68,7 @@ class CacherDiskcache(BaseCacher):
                 if name in self._cache:
                     return True
         except sqlite3.OperationalError as e:
-            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {str(e)}")
+            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {e!s}") from e
         self._logger.debug("Cache entry %s::%s does not exist", self._cache_dir, name)
         return False
 
@@ -124,7 +96,7 @@ class CacherDiskcache(BaseCacher):
         Loads an object for a given cache entry name. If it doesn't exist an exception is thrown.
         """
         if self._disabled:
-            raise CacheEntryDoesNotExistError(f"Caching is disabled...")
+            raise CacheEntryDoesNotExistError("Caching is disabled...")
 
         self._logger.debug("Cache get: %s::%s", self._cache_dir, name)
 

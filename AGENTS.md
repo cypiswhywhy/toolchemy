@@ -21,11 +21,12 @@ Use Poetry for all Python execution.
 ### Lint
 
 - `make lint`
-- Equivalent: `pylint --rcfile pyproject.toml toolchemy`
+- Equivalent: `ruff check toolchemy tests scripts` (config in `[tool.ruff]` in `pyproject.toml`)
 
 ### Tests (all)
 
 - Unit tests: `make test`
+- Unit tests with branch coverage: `make test-cov`
 - All tests: `make test-all`
 - Performance tests: `make test-perf`
 
@@ -107,6 +108,7 @@ Use Poetry for all Python execution.
 ## Repository structure
 
 - `toolchemy/ai`: model clients, prompting, trackers.
+- `toolchemy/db`: TinyDB-backed lightweight database wrapper.
 - `toolchemy/utils`: helpers, logging, caching, timers.
 - `toolchemy/vision`: image utilities.
 - `tests/unit`: unit tests.
@@ -146,14 +148,20 @@ Use Poetry for all Python execution.
 - Add small helpers to `toolchemy/utils` instead of duplicating logic.
 - If a new feature has configuration, model it as a dataclass or BaseModel.
 
-## Linting considerations (pylint)
+## Linting considerations (ruff)
 
+- `make lint` must pass before a change lands.
+- The enabled rule set lives in `[tool.ruff.lint]` in `pyproject.toml` and is widened
+  deliberately: add a rule group only once the tree is clean against it.
 - Ensure new modules/classes follow the same naming scheme.
 - Avoid unused imports or variables.
-- Provide docstrings where pylint would require them (if configured later).
+- Deliberate exceptions belong in `[tool.ruff.lint.per-file-ignores]` with a comment
+  saying why, not as scattered `# noqa`.
 
 ## Testing considerations
 
 - Prefer unit tests; perf tests live in `tests/perf` with `pytest-benchmark`.
 - For cache tests, assert error types (`CacheEntryDoesNotExistError`, etc.).
-- For client tests, use dummy or fake clients to avoid network calls.
+- For client tests, use `DummyModelClient` (or another fake) to avoid network calls.
+- Regenerate `AGENTS_MANIFEST.md` with `make docs-agents` after adding or renaming a
+  public symbol; every subpackage needs an `__init__.py` or the generator will not see it.

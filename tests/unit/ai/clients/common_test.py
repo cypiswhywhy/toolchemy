@@ -1,4 +1,5 @@
 from toolchemy.ai.clients import ModelConfig, prepare_chat_messages
+from toolchemy.ai.clients.common import LLMClientBase, Usage
 from toolchemy.utils.utils import ff
 
 
@@ -13,7 +14,8 @@ def test_model_config():
                                temperature=expected_temperature, top_p=expected_top_p,
                                presence_penalty=expected_presence_penalty)
 
-    expected_model_config_str = f"{expected_model_name}__{expected_max_tokens}__{ff(expected_presence_penalty)}__{ff(expected_temperature)}__{ff(expected_top_p)}"
+    expected_model_config_str = (f"{expected_model_name}__{expected_max_tokens}__{ff(expected_presence_penalty)}"
+                                 f"__{ff(expected_temperature)}__{ff(expected_top_p)}")
 
     assert str(model_config) == expected_model_config_str
 
@@ -98,3 +100,52 @@ def test_prepare_chat_messages_with_history_and_implicite_system_prompt():
     messages = prepare_chat_messages(prompt=prompt2, system_prompt=system_prompt, messages_history=expected_messages[1:3])
 
     assert messages == expected_messages
+
+
+def test_prepare_chat_messages_does_not_mutate_the_history_argument():
+    history = [
+        {"role": "user", "content": "foo"},
+        {"role": "assistant", "content": "foo-response"},
+    ]
+    history_before = [dict(message) for message in history]
+
+    messages = prepare_chat_messages(prompt="bar", messages_history=history)
+
+    assert history == history_before
+    assert len(messages) == 3
+
+
+def test_prepare_chat_messages_does_not_mutate_the_history_argument_with_system_prompt():
+    history = [
+        {"role": "system", "content": "system_prompt"},
+        {"role": "user", "content": "foo"},
+    ]
+    history_before = [dict(message) for message in history]
+
+    prepare_chat_messages(prompt="bar", system_prompt="system_prompt", messages_history=history)
+
+    assert history == history_before
+
+
+def test_usage_equality_covers_every_field():
+    base = Usage(input_tokens=1, output_tokens=2, duration=3.0)
+
+    assert base == Usage(input_tokens=1, output_tokens=2, duration=3.0)
+    assert base != Usage(input_tokens=9, output_tokens=2, duration=3.0)
+    assert base != Usage(input_tokens=1, output_tokens=9, duration=3.0)
+    assert base != Usage(input_tokens=1, output_tokens=2, duration=9.0)
+    assert base != Usage(input_tokens=1, output_tokens=2, duration=3.0, cached=True)
+
+
+def test_model_config_uses_the_default_model_name_it_is_given():
+    class _Client(LLMClientBase):
+        def _completion(self, prompt, system_prompt, model_config=None, images_base64=None):
+            raise NotImplementedError
+
+        def embeddings(self, text: str) -> list[float]:
+            raise NotImplementedError
+
+    client = _Client(default_model_name="model-A", disable_cache=True)
+
+    assert client.model_config(default_model_name="model-B").model_name == "model-B"
+    assert client.name() == "model-A"

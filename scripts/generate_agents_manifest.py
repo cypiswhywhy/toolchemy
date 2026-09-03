@@ -44,7 +44,12 @@ _BOILERPLATE_DOC_PREFIXES = (
 
 
 def first_docline(obj: Any) -> str | None:
-    doc = inspect.getdoc(obj)
+    # inspect.getdoc() falls back to the base class docstring, which would describe every
+    # cacher subclass as "Cacher interface". Only a symbol's own docstring describes it.
+    if isinstance(obj, type):
+        doc = obj.__dict__.get("__doc__")
+    else:
+        doc = inspect.getdoc(obj)
     if not doc:
         return None
     line = doc.strip().splitlines()[0].strip()

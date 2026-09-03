@@ -57,16 +57,17 @@ class AtExitCollector:
         if not cls._is_enabled:
             return
         if len(cls._collectables) == 0:
-            cls._collector_logger.info(f"No collectable registered, skipping AtExitCollector summary.")
+            cls._collector_logger.info("No collectable registered, skipping AtExitCollector summary.")
             return
         cls._collector_logger.info("AtExitCollector| generating summary...")
         aggregated = {}
         for collectable in cls._collectables:
             try:
                 data = collectable.collect()
-            except TypeError as e:
-                cls._collector_logger.error(f"Collectable of wrong type: {type(collectable)} (is ICollectable: {isinstance(collectable, ICollectable)}): {collectable} (err msg: {e})")
-                raise e
+            except TypeError:
+                cls._collector_logger.exception(f"Collectable of wrong type: {type(collectable)} "
+                                                f"(is ICollectable: {isinstance(collectable, ICollectable)}): {collectable}")
+                raise
 
             name = collectable.label()
             if name not in aggregated:

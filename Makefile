@@ -1,16 +1,19 @@
 SHELL := /bin/bash
 
-.PHONY: help lint test test-all test-perf docs-agents _publish publish
+.PHONY: help lint test test-cov test-all test-perf docs-agents _publish publish
 
 help:
 	@echo "Available targets:"
 	@grep -hF "##" $(MAKEFILE_LIST) | grep -Fv MAKEFILE_LIST | sed 's/^/  /'
 
 lint: 		                     ## Lints source code
-	@pylint --rcfile pyproject.toml toolchemy
+	poetry run ruff check toolchemy tests scripts
 
 test:                            ## Run all unit tests
 	poetry run pytest ./tests/unit
+
+test-cov:                        ## Run unit tests with a branch-coverage report
+	poetry run pytest ./tests/unit --cov=toolchemy --cov-branch --cov-report=term-missing
 
 test-all:                       ## Run all tests
 	poetry run pytest ./tests

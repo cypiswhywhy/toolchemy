@@ -10,7 +10,9 @@ include = [
 [tool.poetry.dependencies]
 python = "~3.12"
 ollama = "^0.6.0"
-numpy = "2.4.2"
+# a library should not pin its consumers to one numpy build; toolchemy only uses
+# np.random.seed, np.ndarray and np.float32
+numpy = "^2.4.2"
 mlflow = "^3.15.2"
 neptune-scale = "^0.13.0"
 openai = "^2.16.0"
@@ -23,16 +25,25 @@ jsonschema = "^4.23.0"
 click = "^8.1.8"
 # direct dependency of toolchemy.vision (PIL imports); do not rely on the mlflow->matplotlib chain
 pillow = "^12.2.0"
+# imported directly by shipped modules; previously reached only through the mlflow
+# dependency chain, which is exactly what the pillow note above warns against
+pydantic = "^2.13.5"       # toolchemy.ai.clients.common (ModelConfig)
+requests = "^2.34.2"       # toolchemy.ai.clients.whisper_client
+jinja2 = "^3.1.6"          # toolchemy.ai.prompting.common
+pandas = "^2.3.3"          # toolchemy.ai.trackers.common, .mlflow_tracker
+tqdm = "^4.70.0"           # toolchemy.db.lightdb
 # optional: only needed for GeminiClient (install as `toolchemy[gemini]`)
 google-genai = { version = "^1.55.0", optional = true }
 
 [tool.poetry.extras]
 gemini = ["google-genai"]
 
-# google-genai installs into the `google.*` namespace package, so deptry cannot map
-# `from google import genai` back to it and false-flags it as unused (DEP002)
+# packages whose distribution name differs from the module they provide, which deptry
+# cannot map on its own and so false-flags as unused (DEP002) / undeclared (DEP001):
+# google-genai installs into the `google.*` namespace package, pillow provides `PIL`
 [tool.deptry.package_module_name_map]
 google-genai = "google"
+pillow = "PIL"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
@@ -40,6 +51,30 @@ pyfakefs = "^5.9.2"
 pytest-benchmark = "^5.1.0"
 freezegun = "^1.5.5"
 deepdiff = "^8.6.1"
+pytest-cov = "^7.0.0"
+ruff = "^0.15.4"
+
+[tool.ruff]
+line-length = 160
+target-version = "py312"
+
+[tool.ruff.lint]
+# Rule groups are added as the tree is brought clean against them, so
+# `make lint` always passes on `main`.
+select = ["E4", "E7", "E9", "E501", "W", "F541", "RUF010", "SIM101", "SIM118", "SIM201", "SIM910",
+          "B904", "B014", "TRY201", "TRY400"]
+
+[tool.ruff.lint.per-file-ignores]
+# `mlflow.autolog(disable=True)` has to run before the mlflow submodules are
+# imported, so those imports cannot sit at the top of the file.
+"toolchemy/ai/trackers/mlflow_tracker.py" = ["E402"]
+# These modules hold multi-line prompt templates that are sent verbatim to a
+# model. A line inside a triple-quoted string cannot carry a noqa, and
+# rewrapping it would change the prompt, so E501 is off for the whole file.
+"toolchemy/ai/clients/common.py" = ["E501"]
+"toolchemy/ai/prompting/simple_llm_prompt_optimizer.py" = ["E501"]
+# Binary fixture literal that cannot be wrapped meaningfully.
+"tests/unit/utils/utils_test.py" = ["E501"]
 
 [tool.poetry.scripts]
 prompt-studio = "toolchemy.ai.prompting.prompter_mlflow:run_studio"

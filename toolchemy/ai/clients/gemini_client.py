@@ -23,7 +23,7 @@ class GeminiClient(LLMClientBase):
                          fix_malformed_json=fix_malformed_json,
                          cacher=cacher, disable_cache=disable_cache, log_level=log_level)
         self._client = genai.Client(api_key=api_key)
-        self._logger.debug(f"Gemini client has been initialized")
+        self._logger.debug("Gemini client has been initialized")
 
     def embeddings(self, text: str) -> list[float]:
         raise NotImplementedError()

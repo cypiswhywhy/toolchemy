@@ -1,61 +1,38 @@
-import json
-from toolchemy.ai.clients.common import ILLMClient, ModelConfig, Usage
+import logging
+
+from toolchemy.ai.clients.common import LLMClientBase, ModelConfig, Usage
 
 
-class DummyModelClient(ILLMClient):
-    def __init__(self, name: str = "dummy", fixed_response: str | None = None):
-        self._name = name
+class DummyModelClient(LLMClientBase):
+    """
+    Client that answers locally instead of calling a model, for tests and offline runs.
+
+    Echoes the prompt back, or returns `fixed_response` when one is given.
+    """
+
+    DEFAULT_MODEL_NAME = "dummy-model"
+    EMBEDDINGS_SIZE = 32
+
+    def __init__(self, name: str = DEFAULT_MODEL_NAME, fixed_response: str | None = None,
+                 system_prompt: str | None = None, default_model_config: ModelConfig | None = None,
+                 disable_cache: bool = True, log_level: int = logging.INFO):
+        super().__init__(default_model_name=name, system_prompt=system_prompt,
+                         default_model_config=default_model_config,
+                         disable_cache=disable_cache, log_level=log_level)
         self._fixed_response = fixed_response
-        self._metadata = {"name": self._name}
-        self._usages = []
-
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def metadata(self) -> dict:
-        return self._metadata
-
-    def usage(self, tail: int | None = None) -> list[Usage]:
-        tail = tail or len(self._usages)
-        usages = self._usages[-tail:]
-        return usages
 
     @property
     def system_prompt(self) -> str:
-        return "You are a dummy AI Assistant"
+        return self._system_prompt or "You are a dummy AI Assistant"
 
-    def embeddings(self, text: str, model_name: str = "nomic-embed-text") -> list[float]:
-        return 32 * [0.98]
+    @property
+    def embeddings_size(self) -> int:
+        return self.EMBEDDINGS_SIZE
+
+    def embeddings(self, text: str) -> list[float]:
+        return self.EMBEDDINGS_SIZE * [0.98]
 
     def _completion(self, prompt: str, system_prompt: str | None, model_config: ModelConfig | None = None,
                     images_base64: list[str] | None = None) -> tuple[str, Usage]:
-        if self._fixed_response:
-            model_response = self._fixed_response
-        else:
-            model_response = f"Echo: {prompt}"
-        return model_response, Usage(input_tokens=0, output_tokens=0, duration=0.0)
-
-    def completion(self, prompt: str, model_config: ModelConfig | None = None,
-                   images_base64: list[str] | None = None, no_cache: bool = False, cache_only: bool = False) -> str:
-        response, usage = self._completion(prompt=prompt, system_prompt=self.system_prompt)
-        self._usages.append(usage)
-        return response
-
-    def completion_json(self, prompt: str, model_config: ModelConfig | None = None,
-                        images_base64: list[str] | None = None, validation_schema: dict | None = None,
-                        no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
-        result_str = self.completion(prompt=prompt, model_config=model_config, images_base64=images_base64, cache_only=cache_only)
-        return json.loads(result_str)
-
-    def model_config(self, base_config: ModelConfig | None = None,
-                     default_model_name: str | None = None) -> ModelConfig:
-        return base_config
-
-    @property
-    def usage_summary(self) -> dict:
-        return {
-            "input_tokens": 0,
-            "output_tokens": 0,
-            "total_tokens": 0,
-        }
+        response = self._fixed_response if self._fixed_response is not None else f"Echo: {prompt}"
+        return response, Usage(input_tokens=0, output_tokens=0, duration=0.0)

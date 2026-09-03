@@ -11,8 +11,9 @@ All commands below run through Poetry against Python 3.12.
 ## Run lint and tests
 
 ```bash
-make lint            # pylint --rcfile pyproject.toml toolchemy
+make lint             # ruff check toolchemy tests scripts
 make test             # unit tests: poetry run pytest ./tests/unit
+make test-cov         # unit tests with a branch-coverage report
 make test-all         # unit + int + perf
 make test-perf        # pytest-benchmark suite only
 ```

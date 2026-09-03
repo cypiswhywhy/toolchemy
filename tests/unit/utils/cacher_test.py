@@ -207,7 +207,7 @@ def test_thread_safeness(cacher_impl):
     cacher = cacher_impl(cache_base_dir=base_dir.name, enable_thread_safeness=True)
 
     def run_cacher():
-        cache_key = f"testing"
+        cache_key = "testing"
         cacher.set(cache_key, input_data)
         assert cacher.exists(cache_key)
         retrieved_data = cacher.get(cache_key)
@@ -222,3 +222,36 @@ def test_thread_safeness(cacher_impl):
     for t in threads:
         assert not t.is_alive()
     base_dir.cleanup()
+
+
+def test_create_cache_key_does_not_mutate_the_parts_argument():
+    parts_plain = ["needs:sanitising", "and this one too"]
+    parts_hashed = ["hashed:part"]
+    parts_plain_before = list(parts_plain)
+    parts_hashed_before = list(parts_hashed)
+
+    cache_key = BaseCacher.create_cache_key(parts_plain, parts_hashed)
+
+    assert parts_plain == parts_plain_before
+    assert parts_hashed == parts_hashed_before
+    assert cache_key == f"needs_sanitising_and_this_one_too_{BaseCacher.hash('hashed:part')}"
+
+
+def test_create_cache_key_is_stable_across_repeated_calls_with_the_same_list():
+    parts_plain = ["a:b"]
+
+    first = BaseCacher.create_cache_key(parts_plain, ["h"])
+    second = BaseCacher.create_cache_key(parts_plain, ["h"])
+
+    assert first == second
+
+
+def test_pickle_set_with_unpicklable_content_raises_typeerror_and_removes_the_partial_file():
+    with tempfile.TemporaryDirectory() as base_dir:
+        cacher = CacherPickle(cache_base_dir=base_dir)
+
+        with pytest.raises(TypeError):
+            cacher.set("broken", {"gen": (x for x in [1, 2])})
+
+        assert not cacher.exists("broken")
+        cacher.persist()

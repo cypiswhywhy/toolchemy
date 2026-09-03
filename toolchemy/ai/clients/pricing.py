@@ -1,6 +1,7 @@
+from toolchemy.utils.logger import get_logger
+
 KEY_INPUT_TOKENS = "input_tokens_cost"
 KEY_OUTPUT_TOKENS = "output_tokens_cost"
-
 
 
 class Pricing:
@@ -82,7 +83,6 @@ class Pricing:
     @classmethod
     def estimate(cls, model_name: str, input_tokens: int, output_tokens: int) -> float:
         if model_name not in cls.pricing_per_1_mln:
-            from toolchemy.utils.logger import get_logger
             logger = get_logger()
             logger.warning(f"Model '{model_name}' not supported for pricing estimation, returning zero value")
             return 0.0

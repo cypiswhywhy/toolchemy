@@ -32,7 +32,7 @@ class MLFlowTracker(TrackerBase):
             self._client = mlflow.tracking.MlflowClient(tracking_uri=tracking_uri, registry_uri=registry_uri)
 
         logger = get_logger()
-        logger.info(f"Mlflow tracker created")
+        logger.info("Mlflow tracker created")
         logger.info(f"> tracking uri: {tracking_uri}")
         logger.info(f"> artifact logging: {self._artifact_logging}")
 
@@ -74,8 +74,10 @@ class MLFlowTracker(TrackerBase):
         if parent_run_id is not None:
             assert len(self._run_ids) > 0, "There is no parent run id in the stack!"
             assert len(self._runs) > 0, "There is no parent run in the stack!"
-            assert self._run_ids[-1] == parent_run_id, f"The parent run id must be the active one (parent id: {self._run_ids[-1]}, requested parent id: {parent_run_id})!"
-            assert self._runs[-1].info.run_id == parent_run_id, f"The parent run must be the active one (parent id: {self._runs[-1].info.run_id}, requested parent id: {parent_run_id})"
+            assert self._run_ids[-1] == parent_run_id, \
+                f"The parent run id must be the active one (parent id: {self._run_ids[-1]}, requested parent id: {parent_run_id})!"
+            assert self._runs[-1].info.run_id == parent_run_id, \
+                f"The parent run must be the active one (parent id: {self._runs[-1].info.run_id}, requested parent id: {parent_run_id})"
             user_specified_tags[MLFLOW_PARENT_RUN_ID] = parent_run_id
         if run_name:
             user_specified_tags[MLFLOW_RUN_NAME] = run_name
@@ -88,7 +90,7 @@ class MLFlowTracker(TrackerBase):
             self._logger.debug(f"Experiment '{self._experiment_name}' already exists")
             self._experiment_id = experiment.experiment_id
             if experiment.lifecycle_stage == "deleted":
-                self._logger.info(f"Restoring deleted experiment")
+                self._logger.info("Restoring deleted experiment")
                 self._client.restore_experiment(self._experiment_id)
         else:
             experiment_comment_msg = "(does not exist, creating a new one)"
@@ -104,10 +106,10 @@ class MLFlowTracker(TrackerBase):
         self._runs.append(self._active_run)
         self._run_ids.append(self._active_run_id)
 
-        self._logger.info(f"Starting the experiment tracking")
+        self._logger.info("Starting the experiment tracking")
         self._logger.info(f"> experiment name: {self._experiment_name} {experiment_comment_msg}")
         self._logger.info(f"> experiment id: {self._experiment_id}")
-        self._logger.info(f"> run name: {run_name} (run id: {str(self._active_run_id)}, runs in the stack: {len(self._runs)})")
+        self._logger.info(f"> run name: {run_name} (run id: {self._active_run_id!s}, runs in the stack: {len(self._runs)})")
 
     def end_run(self):
         if self._disabled or self._active_run is None:
@@ -121,7 +123,7 @@ class MLFlowTracker(TrackerBase):
         self._reset_run()
 
     def _reset_run(self):
-        self._logger.debug(f"Resetting the run...")
+        self._logger.debug("Resetting the run...")
         if len(self._runs) == 0 and len(self._run_ids) == 0 and self._active_run is None and self._active_run_id is None:
             return
 
@@ -166,11 +168,11 @@ class MLFlowTracker(TrackerBase):
             return
         try:
             self._client.log_text(run_id=self._active_run_id, text=value, artifact_file=name)
-        except MlflowException as e:
-            self._logger.error(f"An error occurred during text logging: {e}")
-            self._logger.error(f"> tracking uri: {self._client.tracking_uri}")
-            self._logger.error(f"> artifact uri: {self._active_run.info.artifact_uri}")
-            raise e
+        except MlflowException:
+            self._logger.exception(f"An error occurred during text logging\n"
+                                   f"> tracking uri: {self._client.tracking_uri}\n"
+                                   f"> artifact uri: {self._active_run.info.artifact_uri}")
+            raise
 
     def log_metric(self, name: str, value: float, step: int | None = None, metric_metadata: dict | None = None):
         if self._disabled:

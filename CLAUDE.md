@@ -9,9 +9,10 @@ See `AGENTS.md` for the full contributor guide (style, conventions, per-module p
 All Python execution goes through Poetry. Python 3.12 only.
 
 - Install: `poetry install`
-- Lint: `make lint` (runs `pylint --rcfile pyproject.toml toolchemy`)
+- Lint: `make lint` (runs `ruff check toolchemy tests scripts`; config in `[tool.ruff]`)
 - Unit tests: `make test` (`poetry run pytest ./tests/unit`)
 - All tests incl. perf: `make test-all`
+- Unit tests with branch coverage: `make test-cov`
 - Perf benchmarks only: `make test-perf` (uses `pytest-benchmark`)
 - Single test: `poetry run pytest tests/unit/path/to/test_file.py::TestClass::test_name`
 - By keyword: `poetry run pytest tests/unit -k "keyword"`

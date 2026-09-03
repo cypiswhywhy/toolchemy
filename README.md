@@ -28,8 +28,9 @@ See `AGENTS.md` / `CLAUDE.md` for contributor conventions.
 
 ```bash
 poetry install
-make lint
-make test
+make lint      # ruff
+make test      # unit tests
+make test-cov  # unit tests with a branch-coverage report
 ```
 
 ### Publishing

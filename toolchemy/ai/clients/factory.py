@@ -9,9 +9,10 @@ URI_GEMINI = "gemini"
 URI_DUMMY = "dummy"
 
 
-def create_llm(name: str, uri: str | None = None, api_key: str | None = None, default_model_config: ModelConfig | None = None, system_prompt: str | None = None, log_level: int = logging.INFO, no_cache: bool = False) -> LLMClientBase:
+def create_llm(name: str, uri: str | None = None, api_key: str | None = None, default_model_config: ModelConfig | None = None,
+               system_prompt: str | None = None, log_level: int = logging.INFO, no_cache: bool = False) -> LLMClientBase:
     logger = get_logger(level=log_level)
-    logger.debug(f"Creating llm instance")
+    logger.debug("Creating llm instance")
     logger.debug(f"> name: {name}")
     if name.startswith("gpt") and not name.startswith("gpt-oss"):
         uri = URI_OPENAI
@@ -24,12 +25,16 @@ def create_llm(name: str, uri: str | None = None, api_key: str | None = None, de
 
     if uri == URI_OPENAI:
         if not api_key:
-            raise ValueError(f"you must pass the 'api_key' explicitly as parameter for this function.")
+            raise ValueError("you must pass the 'api_key' explicitly as parameter for this function.")
         return OpenAIClient(model_name=name, api_key=api_key, system_prompt=system_prompt, default_model_config=default_model_config, no_cache=no_cache)
+
+    if uri == URI_DUMMY:
+        return DummyModelClient(name=name, system_prompt=system_prompt, default_model_config=default_model_config,
+                                disable_cache=no_cache, log_level=log_level)
 
     if uri == URI_GEMINI:
         if not api_key:
-            raise ValueError(f"you must pass the 'api_key' explicitly as parameter for this function.")
+            raise ValueError("you must pass the 'api_key' explicitly as parameter for this function.")
         if GeminiClient is None:
             raise RuntimeError("Gemini support requires the 'google-genai' package, which is not installed "
                                "(install the 'gemini' extra: toolchemy[gemini]).")

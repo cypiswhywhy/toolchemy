@@ -132,9 +132,9 @@ def test_render_with_cache(prompter, version: str):
     prompt_name = "test_prompt"
     expected_prompt = Prompt(
         system=PrompterBase.DEFAULT_PROMPT_SYSTEM,
-        user=f"Yolo! I say cat, you say dog. Second version.",
+        user="Yolo! I say cat, you say dog. Second version.",
         template_system=PrompterBase.DEFAULT_PROMPT_SYSTEM,
-        template_user=f"Yolo! I say {{{{foo}}}}, you say {{{{bar}}}}. Second version.",
+        template_user="Yolo! I say {{foo}}, you say {{bar}}. Second version.",
     )
     rendered_prompt = prompter.render(
         name=prompt_name, version=version, foo="cat", bar="dog"

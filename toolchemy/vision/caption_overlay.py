@@ -27,8 +27,6 @@ class Caption:
 
 
 def add_caption(input_img_path: str, captions: list[Caption], output_img_path: str | None = None):
-    # fonts = ["Pacifico.ttf", "Anton.ttf"]
-
     if output_img_path is None:
         path_root, path_ext = os.path.splitext(input_img_path)
         output_img_path = f"{path_root}_out{path_ext}"

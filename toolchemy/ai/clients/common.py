@@ -6,7 +6,6 @@ from tenacity import wait_exponential, Retrying, stop_after_attempt
 from tenacity import RetryCallState
 from dataclasses import dataclass
 from json import JSONDecodeError
-from json.decoder import JSONDecodeError as JSONDecoderDecodeError
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
 from typing import TypedDict, NotRequired
@@ -363,7 +362,7 @@ Malformed JSON object:
                     self._logger.error(f"Invalid schema: {e}")
                     raise e
 
-        except (JSONDecodeError, JSONDecoderDecodeError) as e:
+        except JSONDecodeError as e:
             if self._fix_malformed_json and self._fix_json_prompt_template:
                 self._logger.warning("Malformed JSON, trying to fix it...")
                 self._logger.warning(f"Malformed JSON:\n'{response_str}'")
@@ -382,7 +381,7 @@ Malformed JSON object:
         try:
             content = json.loads(json_str)
             return content
-        except (JSONDecodeError, JSONDecodeError) as e:
+        except JSONDecodeError:
             pass
 
         lines = [line.strip() for line in json_str.strip().split('\n') if line.strip()]

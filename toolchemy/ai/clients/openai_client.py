@@ -2,7 +2,6 @@ import time
 from abc import ABC, abstractmethod
 from openai import OpenAI, AzureOpenAI, NOT_GIVEN
 from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
-from typing import Iterable
 
 from toolchemy.ai.clients.common import LLMClientBase, ModelConfig, Usage, prepare_chat_messages
 

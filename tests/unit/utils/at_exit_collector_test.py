@@ -1,7 +1,5 @@
-import logging
-import pytest
 import unittest
-from unittest.mock import Mock, patch, call
+from unittest.mock import patch
 from toolchemy.utils.at_exit_collector import ICollectable, AtExitCollector
 
 

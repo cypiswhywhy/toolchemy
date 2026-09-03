@@ -157,7 +157,7 @@ def test_diskcache_t_safe_set_large(benchmark, input_data_large):
 
 
 @pytest.mark.benchmark(group="set_large")
-def test_diskcache_t_safe_set_large(benchmark, input_data_large):
+def test_diskcache_t_safe_fanout_set_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         benchmark(benchmark_set, cacher=cacher, data=input_data_large)
@@ -278,7 +278,7 @@ def test_diskcache_t_safe_get_large(benchmark, input_data_large):
 
 
 @pytest.mark.benchmark(group="get_large")
-def test_diskcache_t_safe_get_large(benchmark, input_data_large):
+def test_diskcache_t_safe_fanout_get_large(benchmark, input_data_large):
     with tempfile.TemporaryDirectory() as tmp_dir:
         cacher = CacherDiskcache(cache_base_dir=tmp_dir, shards=SHARDS, thread_safe=True)
         _prefill_cacher(cacher=cacher, input_data=input_data_large)

@@ -78,18 +78,11 @@ class CacherPickle(BaseCacher):
         ret_val = False
         if target_file.is_file() or target_file.is_symlink():
             try:
-                entry = self._get(name)
-                if entry['ttl_s'] is None:
-                    ret_val = True
-                else:
-                    current_time = current_unix_timestamp()
-                    if current_time - entry['timestamp'] < entry['ttl_s']:
-                        ret_val = True
-                    else:
-                        self.unset(name)
-                        ret_val = False
+                # _get() already evicts and raises for an entry past its ttl
+                self._get(name)
             except CacheEntryDoesNotExistError:
                 return False
+            ret_val = True
             self._logger.debug("Cache entry %s::%s (%s) exists", self._name, name, target_filename)
 
         self._logger.debug("Cache entry %s::%s does not exist", self._name, name)

@@ -259,7 +259,6 @@ def test_completion_json(client_class_mock, client_class_mock_return_values, mod
 @patch("toolchemy.ai.clients.ollama_client.Client")
 def test_completion_json_invalid_schema(client_class_mock):
     expected_model_name = "dummy-model"
-    expected_response = {"expected": "response"}
     prompt = "test"
 
     expected_model_config = ModelConfig()

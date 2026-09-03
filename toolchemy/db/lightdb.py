@@ -147,7 +147,6 @@ class LightTinyDB(ILightDB):
         self._logger.debug(f"> indexed {len(docs)} documents")
 
     def _add_to_index(self, field_name: str, doc: dict) -> None:
-        # self._logger.debug(f"Adding to index '{field_name}': {doc.get(field_name, 'MISSING')}")
         if field_name not in doc:
             return
         self._indexes[field_name][doc[field_name]].append(doc)

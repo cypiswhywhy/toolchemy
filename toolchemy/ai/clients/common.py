@@ -278,11 +278,21 @@ Malformed JSON object:
         self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
         self._logger.debug(f"> Model config (mod): model: {model_cfg.model_name}, max_new_tokens: {model_cfg.max_new_tokens}, temp: {model_cfg.temperature}")
 
+        return self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_cfg,
+                                       images_base64=images_base64, no_cache=no_cache, cache_only=cache_only,
+                                       is_json=True, validation_schema=validation_schema)
+
+    def _cached_completion(self, prompt: str, system_prompt: str | None, model_config: ModelConfig,
+                           images_base64: list[str] | None, no_cache: bool, cache_only: bool,
+                           is_json: bool, validation_schema: dict | None = None) -> str | dict | list[dict]:
+        """
+        Shared cache-lookup / retry / cache-store path behind completion() and completion_json().
+        """
         cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
-                                                                 model_config=model_cfg, images_base64=images_base64,
-                                                                 is_json=True)
+                                                                 model_config=model_config, images_base64=images_base64,
+                                                                 is_json=is_json)
         if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
-            self._logger.debug(f"Cache for completion_json already exists ('{cache_key}')")
+            self._logger.debug(f"Cache for the prompt already exists ('{cache_key}')")
             usage = self._cacher.get(cache_key_usage)
             usage.cached = True
             self._usages.append(usage)
@@ -291,25 +301,31 @@ Malformed JSON object:
         if cache_only:
             raise LLMCacheDoesNotExist()
 
-        self._logger.debug(f"Cache for completion_json does not exists, generating new response")
+        self._logger.debug("Cache for the prompt does not exist, generating a new response")
 
         try:
-            response_json, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
-                                                 model_config=model_cfg,
-                                                 images_base64=images_base64,
-                                                 validation_schema=validation_schema)
+            if is_json:
+                response, usage = self._retryer(self._completion_json, prompt=prompt, system_prompt=system_prompt,
+                                                model_config=model_config,
+                                                images_base64=images_base64,
+                                                validation_schema=validation_schema)
+            else:
+                response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
+                                                model_config=model_config,
+                                                images_base64=images_base64)
         except Exception:
             self._logger.error(f"> system prompt: {system_prompt}")
             self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_cfg.raw()}")
+            self._logger.error(f"> model config: {model_config.raw()}")
             raise
+
         self._usages.append(usage)
 
         if not no_cache:
-            self._cacher.set(cache_key, response_json)
+            self._cacher.set(cache_key, response)
             self._cacher.set(cache_key_usage, usage)
 
-        return response_json
+        return response
 
     def _before_sleep_log(self, retry_state: RetryCallState) -> None:
         if retry_state.outcome is None or retry_state.next_action is None:
@@ -407,36 +423,11 @@ Malformed JSON object:
         system_prompt = system_prompt or self._system_prompt
         self._logger.debug(f"Completion started (model: {model_config.model_name})")
 
-        cache_key, cache_key_usage = self._cache_keys_completion(system_prompt=system_prompt, prompt=prompt,
-                                                                 model_config=model_config, images_base64=images_base64,
-                                                                 is_json=False)
-        if not no_cache and self._cacher.exists(cache_key) and self._cacher.exists(cache_key_usage):
-            self._logger.debug(f"Cache for the prompt already exists ('{cache_key}')")
-            usage_cached = self._cacher.get(cache_key_usage)
-            usage_cached.cached = True
-            self._usages.append(usage_cached)
-            return self._cacher.get(cache_key)
+        response = self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_config,
+                                           images_base64=images_base64, no_cache=no_cache, cache_only=cache_only,
+                                           is_json=False)
 
-        if cache_only:
-            raise LLMCacheDoesNotExist()
-
-        try:
-            response, usage = self._retryer(self._completion, prompt=prompt, system_prompt=system_prompt,
-                                        model_config=model_config,
-                                        images_base64=images_base64)
-        except Exception:
-            self._logger.error(f"> system prompt: {system_prompt}")
-            self._logger.error(f"> prompt: {prompt}")
-            self._logger.error(f"> model config: {model_config.raw()}")
-            raise
-
-        self._usages.append(usage)
-
-        if not no_cache:
-            self._cacher.set(cache_key, response)
-            self._cacher.set(cache_key_usage, usage)
-
-        self._logger.debug(f"Completion done.")
+        self._logger.debug("Completion done.")
 
         return response
 

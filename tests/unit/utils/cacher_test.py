@@ -244,3 +244,14 @@ def test_create_cache_key_is_stable_across_repeated_calls_with_the_same_list():
     second = BaseCacher.create_cache_key(parts_plain, ["h"])
 
     assert first == second
+
+
+def test_pickle_set_with_unpicklable_content_raises_typeerror_and_removes_the_partial_file():
+    with tempfile.TemporaryDirectory() as base_dir:
+        cacher = CacherPickle(cache_base_dir=base_dir)
+
+        with pytest.raises(TypeError):
+            cacher.set("broken", {"gen": (x for x in [1, 2])})
+
+        assert not cacher.exists("broken")
+        cacher.persist()

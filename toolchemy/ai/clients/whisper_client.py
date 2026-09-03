@@ -103,6 +103,7 @@ class WhisperClient:
 
             await self._whisper_client_wyoming.write_event(AudioStop().event())
 
+            transcript = None
             while True:
                 event = await asyncio.wait_for(self._whisper_client_wyoming.read_event(), timeout=30)
                 if event is None:
@@ -112,6 +113,9 @@ class WhisperClient:
                     self._logger.info(f"Transcription: {transcript.text}")
                     break
         await self._whisper_client_wyoming.disconnect()
+
+        if transcript is None:
+            raise RuntimeError("The transcription service closed the stream before returning a transcript")
 
         return transcript.text
 
@@ -130,7 +134,10 @@ class WhisperClient:
             temp_wav.name
         ]
 
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"ffmpeg failed to convert '{input_path}' to wav: {e.stderr.decode(errors='replace').strip()}") from e
         return temp_wav.name
 
 

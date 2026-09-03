@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 
-from toolchemy.utils.utils import pp, pp_cast, to_json, truncate, batchize
+from toolchemy.utils.utils import pp, pp_cast, to_json, truncate, batchize, split_text
 from toolchemy.utils.datestimes import str_to_datetime, datetime_to_str
 
 
@@ -304,3 +304,11 @@ def test_batchize_many():
     assert batches[1] == [3, 4, 5]
     assert batches[2] == [6, 7, 8]
     assert batches[3] == [9]
+
+
+def test_split_text_rejects_a_chunk_overlap_that_is_not_smaller_than_the_chunk_size():
+    with pytest.raises(ValueError, match="must be greater than chunk_overlap"):
+        split_text("some text", chunk_size=10, chunk_overlap=10)
+
+    with pytest.raises(ValueError, match="must be greater than chunk_overlap"):
+        split_text("some text", chunk_size=5, chunk_overlap=10)

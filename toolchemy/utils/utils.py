@@ -55,7 +55,7 @@ def pp_cast(msg: Any, skip_fields: list | None = None) -> Any:
     if isinstance(msg_copy, np.ndarray):
         msg_copy = pp_cast(msg_copy.tolist(), skip_fields=skip_fields)
     if isinstance(msg_copy, float):
-        msg_copy = ff(msg)
+        msg_copy = ff(msg_copy)
     if isinstance(msg_copy, datetime.datetime):
         msg_copy = datetime_to_str(msg_copy)
     if isinstance(msg_copy, object) and type(msg_copy).__module__ != "builtins":
@@ -140,6 +140,9 @@ def normalize_path_str(path_: str) -> str:
 
 
 def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
+    if chunk_size <= chunk_overlap:
+        raise ValueError(f"chunk_size ({chunk_size}) must be greater than chunk_overlap ({chunk_overlap})")
+
     num_chunks = (len(text) - chunk_overlap) // (chunk_size - chunk_overlap)
 
     chunks = []

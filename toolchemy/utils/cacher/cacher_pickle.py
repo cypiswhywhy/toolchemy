@@ -4,7 +4,6 @@ import pickle
 import threading
 from pathlib import Path
 from typing import Optional, Any
-import shutil
 
 from toolchemy.utils.cacher.common import BaseCacher, DummyLock, CacheEntryDoesNotExistError
 from toolchemy.utils.datestimes import current_unix_timestamp
@@ -72,7 +71,7 @@ class CacherPickle(BaseCacher):
                     pickle.dump(self._envelop(content, ttl_s=ttl_s), file)  # type: ignore
                 except TypeError:
                     self._logger.exception(f"Wrong type of the serialized content: {type(content)}. Target: {target_filename}. Content:\n{content}")
-                    shutil.rmtree(target_filename)
+                    Path(target_filename).unlink(missing_ok=True)
                     raise
         self._logger.debug("Cache set %s::%s (file: %s)", self._name, name, target_filename)
 

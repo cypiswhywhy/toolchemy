@@ -129,7 +129,7 @@ class LightTinyDB(ILightDB):
         return docs[0]
 
     def search(self, query_filter: Filter) -> list[dict]:
-        self._logger.debug(f"Searching with filter: {str(query_filter)}")
+        self._logger.debug(f"Searching with filter: {query_filter!s}")
         if query_filter.op == FilterOp.EQUAL and query_filter.value is not None:
             if self._has_index(query_filter.key):
                 return self._search_index(query_filter.key, query_filter.value)
@@ -165,19 +165,19 @@ class LightTinyDB(ILightDB):
             self._handle_index_add(doc)
 
     def _handle_index_add(self, doc: dict) -> None:
-        for field_name in doc.keys():
+        for field_name in doc:
             if field_name in self._indexes:
                 self._add_to_index(field_name, doc)
 
     def _handle_index_remove(self, doc: dict):
         self._logger.debug(f"_handler_index_remove| doc: {doc}")
         if len(doc.keys()) == 1 and list(doc.keys())[0] == self.ID_FIELD:
-            self._logger.debug(f"> the doc has a single key, trying to get the full document")
+            self._logger.debug("> the doc has a single key, trying to get the full document")
             doc = self.retrieve(doc[self.ID_FIELD])
             if doc is None:
                 return
             self._logger.debug(f"> the full document: {doc}")
-        for doc_field in doc.keys():
+        for doc_field in doc:
             if doc_field in self._indexes:
                 self._remove_from_index(doc_field, doc)
 

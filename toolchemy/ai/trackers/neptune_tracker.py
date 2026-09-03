@@ -34,9 +34,9 @@ class NeptuneAITracker(TrackerBase):
         if self._disabled:
             return
         if self._active_run or self._active_run_id:
-            raise RuntimeError(f"Cannot start a new run, there is already an active run")
+            raise RuntimeError("Cannot start a new run, there is already an active run")
         if run_name is not None:
-            self._logger.warning(f"Neptune tracker uses 'run_id' as the run name. Use 'run_id' for the custom run name.")
+            self._logger.warning("Neptune tracker uses 'run_id' as the run name. Use 'run_id' for the custom run name.")
             if run_id is None:
                 run_id = run_name
 
@@ -58,7 +58,7 @@ class NeptuneAITracker(TrackerBase):
         if self._disabled:
             return
         if self._active_run is None:
-            raise ValueError(f"No active run to stop")
+            raise ValueError("No active run to stop")
         self._active_run.close()
         self._active_run = None
         self._active_run_id = None
@@ -132,7 +132,7 @@ class NeptuneAITracker(TrackerBase):
         if self._disabled:
             return ""
         if not self._active_run:
-            raise ValueError(f"No active run")
+            raise ValueError("No active run")
         return self._active_run
 
     def _generate_run_name(self) -> str:

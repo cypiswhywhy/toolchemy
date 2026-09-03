@@ -24,7 +24,7 @@ class OllamaClient(LLMClientBase):
         # tokens are hidden from `response` and can consume the whole num_predict budget, yielding empty output
         self._think = think
         self._metadata["uri"] = self._uri
-        assert self._uri, f"The model uri cannot be empty!"
+        assert self._uri, "The model uri cannot be empty!"
 
         self._client = Client(host=self._uri)
         self._logger.debug(f"OLlama client has been initialized ({self._uri})")
@@ -32,7 +32,7 @@ class OllamaClient(LLMClientBase):
     def embeddings(self, text: str) -> list[float]:
         cache_key = self._cacher.create_cache_key(["llm_embeddings"], [text])
         if self._cacher.exists(cache_key):
-            self._logger.debug(f"Cache for the text embeddings already exists")
+            self._logger.debug("Cache for the text embeddings already exists")
             return self._cacher.get(cache_key)
 
         results_raw = self._client.embed(model=self.embedding_name, input=text)
@@ -61,6 +61,6 @@ class OllamaClient(LLMClientBase):
         total_duration_s = result.total_duration * Seconds.NANOSECOND
         usage = Usage(input_tokens=result.prompt_eval_count, output_tokens=result.eval_count, duration=total_duration_s)
 
-        self._logger.debug(f"Completion done.")
+        self._logger.debug("Completion done.")
 
         return result.response, usage

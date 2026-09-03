@@ -170,7 +170,7 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
                          with_current_date: bool = False) -> str:
         replaceable_chars = "*.,'\"|<>[]?!-:;()@#$%^&{} "
         if parts_plain is None and parts_hashed is None:
-            raise ValueError(f"You must provide the key components")
+            raise ValueError("You must provide the key components")
         if parts_plain is None:
             parts_plain = []
         if parts_hashed is None:

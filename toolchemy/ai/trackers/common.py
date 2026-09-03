@@ -142,7 +142,7 @@ class TrackerBase(ITracker, ABC):
 
     def _store_param(self, name: str, value: Any):
         if self._disabled:
-            raise RuntimeError(f"Disabled trackers cannot store params!")
+            raise RuntimeError("Disabled trackers cannot store params!")
 
         self._params[name] = value
 
@@ -156,7 +156,7 @@ class TrackerBase(ITracker, ABC):
 
     def _store_metric(self, name: str, value: float, metric_metadata: dict | None = None) -> float:
         if self._disabled:
-            raise RuntimeError(f"Disabled trackers cannot store metrics!")
+            raise RuntimeError("Disabled trackers cannot store metrics!")
         if name not in self._metrics:
             self._metrics[name] = []
 

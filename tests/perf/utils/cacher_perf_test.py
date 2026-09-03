@@ -14,7 +14,7 @@ def _generate_input_data(item_count: int, item_size: int) -> list[dict]:
     for i in range(item_count):
         entry = {}
         for j in range(item_size):
-            entry[f"entry_{str(i)}_{str(j)}"] = f"value_{str(i)}_{j}"
+            entry[f"entry_{i!s}_{j!s}"] = f"value_{i!s}_{j}"
         data.append(entry)
     return data
 
@@ -30,22 +30,22 @@ def input_data_large():
 
 def benchmark_set(cacher: ICacher, data: list):
     for i, item in enumerate(data):
-        cacher.set(f"cache_key_{str(i)}", item)
+        cacher.set(f"cache_key_{i!s}", item)
 
 
 def benchmark_get(cacher: ICacher, item_count: int):
     for i in range(item_count):
-        _ = cacher.get(f"entry_{str(i)}")
+        _ = cacher.get(f"entry_{i!s}")
 
 
 def benchmark_exists(cacher: ICacher, item_count: int):
     for i in range(item_count):
-        cacher.exists(f"entry_{str(i)}")
+        cacher.exists(f"entry_{i!s}")
 
 
 def _prefill_cacher(cacher: ICacher, input_data):
     for i, entry in enumerate(input_data):
-        cacher.set(f"entry_{str(i)}", entry)
+        cacher.set(f"entry_{i!s}", entry)
 
 
 @pytest.mark.benchmark(group="set")

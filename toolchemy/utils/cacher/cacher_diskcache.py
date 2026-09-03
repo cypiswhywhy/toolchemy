@@ -5,7 +5,8 @@ import threading
 from typing import Optional, Any
 from diskcache import Cache, FanoutCache
 
-from toolchemy.utils.cacher.common import BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError, CacherInitializationError, CacheEntrySeemMalformedError, ICacher
+from toolchemy.utils.cacher.common import (BaseCacher, CacheEntryDoesNotExistError, CacheEntryHasNotBeenSetError,
+                                           CacherInitializationError, CacheEntrySeemMalformedError, ICacher)
 
 
 class DummyLock:
@@ -23,8 +24,8 @@ class DummyLock:
 
 
 class CacherDiskcache(BaseCacher):
-    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, shards: int = 1, timeout: int = 30, thread_safe: bool = False, disabled: bool = False,
-                 log_level: int = logging.INFO):
+    def __init__(self, name: str | None = None, cache_base_dir: Optional[str] = None, shards: int = 1, timeout: int = 30,
+                 thread_safe: bool = False, disabled: bool = False, log_level: int = logging.INFO):
         super().__init__()
         self._thread_safe = thread_safe
         self._init_common(name=name, cache_base_dir=cache_base_dir, disabled=disabled, log_level=log_level)
@@ -67,7 +68,7 @@ class CacherDiskcache(BaseCacher):
                 if name in self._cache:
                     return True
         except sqlite3.OperationalError as e:
-            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {str(e)}")
+            raise CacheEntrySeemMalformedError(f"Checking the existence of '{name}' failed with: {e!s}")
         self._logger.debug("Cache entry %s::%s does not exist", self._cache_dir, name)
         return False
 
@@ -95,7 +96,7 @@ class CacherDiskcache(BaseCacher):
         Loads an object for a given cache entry name. If it doesn't exist an exception is thrown.
         """
         if self._disabled:
-            raise CacheEntryDoesNotExistError(f"Caching is disabled...")
+            raise CacheEntryDoesNotExistError("Caching is disabled...")
 
         self._logger.debug("Cache get: %s::%s", self._cache_dir, name)
 

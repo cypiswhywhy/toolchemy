@@ -63,7 +63,8 @@ class Usage:
     cached: bool = False
 
     def __eq__(self, other: "Usage"):
-        return other.input_tokens == self.input_tokens and other.output_tokens == self.output_tokens and other.duration == self.duration and other.duration == self.duration
+        return (other.input_tokens == self.input_tokens and other.output_tokens == self.output_tokens
+                and other.duration == self.duration and other.duration == self.duration)
 
 
 class ILLMClient(ABC):
@@ -214,7 +215,8 @@ Malformed JSON object:
         total_usage["total_tokens"] = total_usage["input_tokens"] + total_usage["output_tokens"]
         total_usage["cached_total_tokens"] = total_usage["cached_input_tokens"] + total_usage["cached_output_tokens"]
         total_usage["duration_avg"] = float(total_usage["duration"] / total_usage["request_count"]) if total_usage["request_count"] else 0.0
-        total_usage["cached_duration_avg"] = float(total_usage["cached_duration"] / total_usage["cached_request_count"]) if total_usage["cached_request_count"] else 0.0
+        total_usage["cached_duration_avg"] = (float(total_usage["cached_duration"] / total_usage["cached_request_count"])
+                                              if total_usage["cached_request_count"] else 0.0)
 
         return total_usage
 
@@ -242,7 +244,7 @@ Malformed JSON object:
             base_config = self._default_model_config.model_copy()
         if base_config.model_name is None:
             if default_model_name is None:
-                raise RuntimeError(f"Model name or default model must be set")
+                raise RuntimeError("Model name or default model must be set")
             base_config.model_name = self._model_name
         return base_config
 
@@ -275,7 +277,8 @@ Malformed JSON object:
                         no_cache: bool = False, cache_only: bool = False) -> dict | list[dict]:
         model_cfg = self.model_config(model_config, self._model_name)
         system_prompt = system_prompt or self._system_prompt
-        self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
+        self._logger.debug(f"CompletionJSON started (model: '{model_cfg.model_name}', max_len: {model_cfg.max_new_tokens}, "
+                           f"temp: {model_cfg.max_new_tokens}), top_p: {model_cfg.top_p})")
         self._logger.debug(f"> Model config (mod): model: {model_cfg.model_name}, max_new_tokens: {model_cfg.max_new_tokens}, temp: {model_cfg.temperature}")
 
         return self._cached_completion(prompt=prompt, system_prompt=system_prompt, model_config=model_cfg,
@@ -450,7 +453,7 @@ def prepare_chat_messages(prompt: str, system_prompt: str | None = None, images_
     messages_all = messages_history or []
     if system_prompt:
         if messages_all and len(messages_all) > 0:
-            if not messages_all[0]["role"] == "system":
+            if messages_all[0]["role"] != "system":
                 messages_all = [{"role": "system", "content": system_prompt}] + messages_all
         else:
             messages_all = [{"role": "system", "content": system_prompt}]

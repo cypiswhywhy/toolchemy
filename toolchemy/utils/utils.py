@@ -70,12 +70,11 @@ def pp(msg: str | dict | float | int | list, skip_fields: list | None = None, pr
     if isinstance(msg_, list):
         if len(msg_) > 0 and isinstance(msg_[0], dict):
             msg_ = json.dumps(msg_, indent=4, ensure_ascii=False)
-    if isinstance(msg_, int) or isinstance(msg_, float):
+    if isinstance(msg_, (int, float)):
         msg_ = ff(msg_)
     if print_msg:
         print(msg_)
     return msg_
-
 
 
 def ff(fval: float | list[float] | int | list[int] | dict | str | np.float32, precision: int = 2):
@@ -157,7 +156,7 @@ def split_text(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
 def truncate(s: str, limit: int) -> str:
     if len(s) <= limit:
         return s
-    return f"{s[:limit]} (...{str(len(s) - limit)} more chars)"
+    return f"{s[:limit]} (...{len(s) - limit!s} more chars)"
 
 
 def batchize(items: list[Any], batch_size: int)-> list[list[Any]]:

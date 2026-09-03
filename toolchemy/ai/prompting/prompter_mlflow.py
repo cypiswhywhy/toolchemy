@@ -44,7 +44,7 @@ class PrompterMLflow(PrompterBase):
             tracking_uri=self._tracking_uri, registry_uri=self._registry_store_uri
         )
 
-        self._logger.info(f"Prompter-MLflow initialized")
+        self._logger.info("Prompter-MLflow initialized")
         self._logger.info(f"> tracking store uri: {self._tracking_uri}")
         self._logger.info(f"> registry store uri: {self._registry_store_uri}")
 
@@ -75,7 +75,7 @@ class PrompterMLflow(PrompterBase):
         )
 
         if self._cacher.exists(cache_key):
-            self._logger.debug(f"Retrieving from the cache")
+            self._logger.debug("Retrieving from the cache")
             prompt_json = self._cacher.get(cache_key)
             return Prompt.from_json(prompt_json)
 
@@ -180,7 +180,7 @@ class PrompterMLflow(PrompterBase):
             name=name_system, version=version_system
         )
 
-        self._logger.debug(f"Rendering prompt:")
+        self._logger.debug("Rendering prompt:")
         self._logger.debug(
             f"> user: '{name}' (version: '{version}') -> uri: '{prompt_uri_user}'"
         )
@@ -200,7 +200,7 @@ class PrompterMLflow(PrompterBase):
         cached_prompt_json = None
         cached_versions = None
         if self._cacher.exists(cache_key):
-            self._logger.debug(f"Retrieving from the cache")
+            self._logger.debug("Retrieving from the cache")
             cache_entry = self._cacher.get(cache_key)
             cached_prompt_json = self._extract_cached_prompt_json(cache_entry)
             cached_versions = self._extract_cached_versions(cache_entry)

@@ -43,7 +43,7 @@ class WhisperClient:
             transcription = self._transcribe_http(audio_path, language=language)
 
         if transcription is None:
-            raise RuntimeError(f"Transcription failed...")
+            raise RuntimeError("Transcription failed...")
 
         return transcription.strip()
 

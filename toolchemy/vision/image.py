@@ -67,7 +67,7 @@ class ImageProcessor:
         self._logger.info(f"> resize ratio: {resize_ratio}")
 
         if resize_ratio <= 1.0 and not upscale:
-            self._logger.info(f"upscaling disabled, skipping")
+            self._logger.info("upscaling disabled, skipping")
             return
 
         new_h = int(cur_h // resize_ratio)
@@ -87,7 +87,7 @@ class ImageProcessor:
     def _open(self):
         if self._img is None:
             if self._image_path is None:
-                raise ValueError(f"image_path is empty, cannot load the image")
+                raise ValueError("image_path is empty, cannot load the image")
             try:
                 self._img = Image.open(self._image_path)
             except UnidentifiedImageError as e:

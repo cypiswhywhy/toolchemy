@@ -13,7 +13,8 @@ def test_model_config():
                                temperature=expected_temperature, top_p=expected_top_p,
                                presence_penalty=expected_presence_penalty)
 
-    expected_model_config_str = f"{expected_model_name}__{expected_max_tokens}__{ff(expected_presence_penalty)}__{ff(expected_temperature)}__{ff(expected_top_p)}"
+    expected_model_config_str = (f"{expected_model_name}__{expected_max_tokens}__{ff(expected_presence_penalty)}"
+                                 f"__{ff(expected_temperature)}__{ff(expected_top_p)}")
 
     assert str(model_config) == expected_model_config_str
 

@@ -207,7 +207,7 @@ def test_thread_safeness(cacher_impl):
     cacher = cacher_impl(cache_base_dir=base_dir.name, enable_thread_safeness=True)
 
     def run_cacher():
-        cache_key = f"testing"
+        cache_key = "testing"
         cacher.set(cache_key, input_data)
         assert cacher.exists(cache_key)
         retrieved_data = cacher.get(cache_key)

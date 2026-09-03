@@ -17,7 +17,7 @@ class SimpleLLMPromptOptimizer(IPromptOptimizer):
         if not prompt.template_user or not prompt.template_system:
             raise InvalidPromptError("Templates for user and system must be present")
 
-        self._logger.debug(f"Prompt optimizer started")
+        self._logger.debug("Prompt optimizer started")
         self._logger.debug(f"> System template BEFORE:\n{prompt.template_system}")
         self._logger.debug(f"> User template BEFORE:\n{prompt.template_user}")
 

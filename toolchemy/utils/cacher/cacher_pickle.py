@@ -83,7 +83,7 @@ class CacherPickle(BaseCacher):
 
     def _get(self, name: str) -> Any:
         if self._disabled:
-            raise CacheEntryDoesNotExistError(f"Caching is disabled...")
+            raise CacheEntryDoesNotExistError("Caching is disabled...")
         target_filename = self._cache_name(name)
         self._logger.debug("Cache get: %s::%s (file: %s)", self._name, name, target_filename)
         target_file = Path(target_filename)

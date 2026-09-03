@@ -44,7 +44,6 @@ class CacherShelve(BaseCacher):
                             cache_base_dir=self._cache_base_dir,
                             log_level=log_level, disabled=self._disabled)
 
-
     def _exists(self, name: str) -> bool:
         if self._disabled:
             self._logger.debug("Cacher disabled")
@@ -100,7 +99,7 @@ class CacherShelve(BaseCacher):
         Loads an object for a given cache entry name. If it doesn't exist an exception is thrown.
         """
         if self._disabled:
-            raise CacheEntryDoesNotExistError(f"Caching is disabled...")
+            raise CacheEntryDoesNotExistError("Caching is disabled...")
 
         self._logger.debug("Cache get: %s::%s", self._cache_dir, name)
 
@@ -154,7 +153,7 @@ class CacherShelve(BaseCacher):
 
     def _migrate(self, name: str, entry: Any) -> dict[str, Any]:
         if not isinstance(entry, dict) or ("data" not in entry and "timestamp" not in entry and "ttl_s" not in entry):
-            self._logger.info(f"Migrating data entry to handle TTL")
+            self._logger.info("Migrating data entry to handle TTL")
             self._logger.info(f"> entry: {entry} (type: {type(entry)})")
             self.set(name, entry)
             entry = self._cache[name]

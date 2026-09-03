@@ -187,12 +187,17 @@ class BaseCacher(ICacher, ICollectable, abc.ABC):
         if isinstance(parts_hashed, dict):
             parts_hashed = [f"{k}_{v}" for k, v in parts_hashed.items()]
 
-        for i, part_plain in enumerate(parts_plain):
-            for char_to_replace in list(replaceable_chars):
-                parts_plain[i] = str(parts_plain[i]).replace(char_to_replace, "_")
+        # build a new list rather than assigning into parts_plain: when the caller passes a
+        # list it is theirs, and rewriting its elements in place is a side effect on their data
+        sanitized_plain = []
+        for part_plain in parts_plain:
+            sanitized = str(part_plain)
+            for char_to_replace in replaceable_chars:
+                sanitized = sanitized.replace(char_to_replace, "_")
+            sanitized_plain.append(sanitized)
 
         parts_hashed = [BaseCacher.hash(str(part_hashed)) for part_hashed in parts_hashed]
-        parts = parts_plain + parts_hashed
+        parts = sanitized_plain + parts_hashed
         if with_current_date:
             parts.append(current_date_str("%Y%m%d"))
 

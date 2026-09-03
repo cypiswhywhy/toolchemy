@@ -222,3 +222,25 @@ def test_thread_safeness(cacher_impl):
     for t in threads:
         assert not t.is_alive()
     base_dir.cleanup()
+
+
+def test_create_cache_key_does_not_mutate_the_parts_argument():
+    parts_plain = ["needs:sanitising", "and this one too"]
+    parts_hashed = ["hashed:part"]
+    parts_plain_before = list(parts_plain)
+    parts_hashed_before = list(parts_hashed)
+
+    cache_key = BaseCacher.create_cache_key(parts_plain, parts_hashed)
+
+    assert parts_plain == parts_plain_before
+    assert parts_hashed == parts_hashed_before
+    assert cache_key == f"needs_sanitising_and_this_one_too_{BaseCacher.hash('hashed:part')}"
+
+
+def test_create_cache_key_is_stable_across_repeated_calls_with_the_same_list():
+    parts_plain = ["a:b"]
+
+    first = BaseCacher.create_cache_key(parts_plain, ["h"])
+    second = BaseCacher.create_cache_key(parts_plain, ["h"])
+
+    assert first == second

@@ -451,7 +451,9 @@ Malformed JSON object:
 
 def prepare_chat_messages(prompt: str, system_prompt: str | None = None, images_base64: list[str] | None = None,
                           messages_history: list[ChatMessage] | None = None, envelope: bool = False) -> list[ChatMessage] | ChatMessages:
-    messages_all = messages_history or []
+    # copy: the user message is appended below, and appending to the caller's own
+    # history list would grow it on every call
+    messages_all = list(messages_history) if messages_history else []
     if system_prompt:
         if messages_all and len(messages_all) > 0:
             if messages_all[0]["role"] != "system":

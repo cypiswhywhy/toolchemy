@@ -99,3 +99,28 @@ def test_prepare_chat_messages_with_history_and_implicite_system_prompt():
     messages = prepare_chat_messages(prompt=prompt2, system_prompt=system_prompt, messages_history=expected_messages[1:3])
 
     assert messages == expected_messages
+
+
+def test_prepare_chat_messages_does_not_mutate_the_history_argument():
+    history = [
+        {"role": "user", "content": "foo"},
+        {"role": "assistant", "content": "foo-response"},
+    ]
+    history_before = [dict(message) for message in history]
+
+    messages = prepare_chat_messages(prompt="bar", messages_history=history)
+
+    assert history == history_before
+    assert len(messages) == 3
+
+
+def test_prepare_chat_messages_does_not_mutate_the_history_argument_with_system_prompt():
+    history = [
+        {"role": "system", "content": "system_prompt"},
+        {"role": "user", "content": "foo"},
+    ]
+    history_before = [dict(message) for message in history]
+
+    prepare_chat_messages(prompt="bar", system_prompt="system_prompt", messages_history=history)
+
+    assert history == history_before

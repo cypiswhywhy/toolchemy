@@ -227,17 +227,20 @@ class DummyLock:
 
 
 class DummyCacher(BaseCacher):
-    def __init__(self, with_memory_store: bool = False):
+    def __init__(self, with_memory_store: bool = False, log_level: int = logging.INFO):
         super().__init__()
         self._data = {}
         self._with_memory_store = with_memory_store
+        self._log_level = log_level
+        self._logger = get_logger(level=log_level)
 
     @property
     def cache_location(self) -> str:
         return ""
 
     def sub_cacher(self, log_level: int | None = None, suffix: str | None = None) -> "ICacher":
-        return DummyCacher(with_memory_store=self._with_memory_store)
+        return DummyCacher(with_memory_store=self._with_memory_store,
+                           log_level=self._log_level if log_level is None else log_level)
 
     def _exists(self, name: str) -> bool:
         if not self._with_memory_store:

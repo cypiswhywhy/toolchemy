@@ -61,6 +61,7 @@ class Usage:
     output_tokens: int
     duration: float
     cached: bool = False
+    truncated: bool = False
 
 
 class ILLMClient(ABC):
@@ -357,7 +358,7 @@ Malformed JSON object:
         self._logger.log(self._log_level, message)
 
     def _completion_json(self, prompt: str, system_prompt: str, model_config: ModelConfig, images_base64: list[str] | None,
-                         validation_schema: dict | None = None) -> tuple[dict | list[dict], Usage]:
+                         validation_schema: dict | None = None, repair_malformed: bool = True) -> tuple[dict | list[dict], Usage]:
         response_str, usage = self._completion(prompt=prompt, system_prompt=system_prompt, model_config=model_config,
                                                images_base64=images_base64)
 
@@ -378,12 +379,19 @@ Malformed JSON object:
                     self._logger.exception("Response failed schema validation")
                     raise
 
-        except JSONDecodeError:
-            if self._fix_malformed_json and self._fix_json_prompt_template:
+        except JSONDecodeError as e:
+            if usage.truncated:
+                # repairing cut-off output only re-sends it to the model, which runs into the same token limit again
+                raise ModelResponseError(f"The LLM response hit the max_new_tokens limit ({model_config.max_new_tokens}) "
+                                         f"and is not valid JSON") from e
+            if repair_malformed and self._fix_malformed_json and self._fix_json_prompt_template:
                 self._logger.warning("Malformed JSON, trying to fix it...")
                 self._logger.warning(f"Malformed JSON:\n'{response_str}'")
                 fix_json_prompt = self._fix_json_prompt_template.format(json_object=response_str)
-                response_json = self.completion_json(fix_json_prompt)
+                response_json, fix_usage = self._completion_json(prompt=fix_json_prompt, system_prompt=self._system_prompt,
+                                                                 model_config=self.model_config(None, self._model_name),
+                                                                 images_base64=None, repair_malformed=False)
+                self._usages.append(fix_usage)
                 self._logger.debug(f"Fixed JSON:\n{response_json}")
             if response_json is None:
                 self._logger.exception(f"Invalid JSON:\n{truncate(response_str, self._truncate_log_messages_to)}\n"

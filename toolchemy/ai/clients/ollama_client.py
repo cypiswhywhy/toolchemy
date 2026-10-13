@@ -54,12 +54,14 @@ class OllamaClient(LLMClientBase):
                                            "num_predict": model_config.max_new_tokens,
                                        }, images=images_base64)
 
-        if getattr(result, "done_reason", None) == "length":
+        truncated = getattr(result, "done_reason", None) == "length"
+        if truncated:
             self._logger.warning(f"Generation stopped at the num_predict limit "
                                  f"({model_config.max_new_tokens}), the response may be truncated")
 
         total_duration_s = result.total_duration * Seconds.NANOSECOND
-        usage = Usage(input_tokens=result.prompt_eval_count, output_tokens=result.eval_count, duration=total_duration_s)
+        usage = Usage(input_tokens=result.prompt_eval_count, output_tokens=result.eval_count, duration=total_duration_s,
+                      truncated=truncated)
 
         self._logger.debug("Completion done.")
 

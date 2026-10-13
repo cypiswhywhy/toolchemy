@@ -51,7 +51,7 @@ Consequences of this design:
 
 ## Retry and malformed-JSON recovery
 
-Provider calls go through a `tenacity.Retrying` instance (exponential backoff, configurable attempts) so transient provider/network failures don't fail a single call outright. Separately, `completion_json` has its own recovery path: if the provider's response fails to parse as JSON, the client sends the malformed output back to the model with a fix-it prompt template (`_fix_json_prompt_template`) and retries the parse once, before giving up and raising. These are two independent failure modes — network retry vs. output repair — handled at different layers, and both are logged at their point of failure rather than swallowed.
+Provider calls go through a `tenacity.Retrying` instance (exponential backoff, configurable attempts) so transient provider/network failures don't fail a single call outright. Separately, `completion_json` has its own recovery path: if the provider's response fails to parse as JSON, the client sends the malformed output back to the model with a fix-it prompt template (`_fix_json_prompt_template`) and retries the parse once, before giving up and raising. Output that stopped at the `max_new_tokens` limit (`Usage.truncated`, set by `OllamaClient`) is never sent for repair: the repair would hit the same limit, so it raises `ModelResponseError` and counts as a failed attempt. These are two independent failure modes — network retry vs. output repair — handled at different layers, and both are logged at their point of failure rather than swallowed.
 
 ## Why `AtExitCollector` exists
 

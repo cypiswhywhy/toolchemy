@@ -35,7 +35,7 @@ Consumer agents: prefer reusing the symbols below over reimplementing logging, c
 
 - **class** `ChatMessageContent(...)` — (inferred) Class `ChatMessageContent` extends dict.
   - `from toolchemy.ai.clients.common import ChatMessageContent`
-- **class** `Usage(input_tokens: int, output_tokens: int, duration: float, cached: bool = False) -> None` — Usage(input_tokens: int, output_tokens: int, duration: float, cached: bool = False)
+- **class** `Usage(input_tokens: int, output_tokens: int, duration: float, cached: bool = False, truncated: bool = False) -> None` — Usage(input_tokens: int, output_tokens: int, duration: float, cached: bool = False, truncated: bool = False)
   - `from toolchemy.ai.clients.common import Usage`
 
 ## `toolchemy.ai.clients.openai_client`

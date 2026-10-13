@@ -10,8 +10,9 @@ from toolchemy.utils.datestimes import Seconds
 
 
 class _OllamaClientGenerateResponse:
-    def __init__(self, response: str):
+    def __init__(self, response: str, done_reason: str = "stop"):
         self._response: str = response
+        self.done_reason = done_reason
         self._prompt_eval_count = 1
         self._eval_count = 1
         self._total_duration = round(1.0 / Seconds.NANOSECOND)
@@ -629,3 +630,33 @@ def test_invalidate_completion_cache(client_class_mock):
 
     assert not client._cacher.exists(expected_cache_key_json)
     assert not client._cacher.exists(expected_cache_key_usage)
+
+
+@patch("toolchemy.ai.clients.ollama_client.Client")
+def test_completion_json_truncated_response_is_not_repaired(client_class_mock):
+    mock_client = client_class_mock.return_value
+    mock_client.generate.return_value = _OllamaClientGenerateResponse('{"people": ["A", "A", "A",', done_reason="length")
+
+    client = OllamaClient(uri="http://uri", model_name="dummy-model", disable_cache=True,
+                          retry_min_wait=1, retry_attempts=2, fix_malformed_json=True)
+
+    with pytest.raises(RetryError) as exc_info:
+        _ = client.completion_json(prompt="test")
+
+    assert isinstance(exc_info.value.last_attempt.exception(), ModelResponseError)
+    assert mock_client.generate.call_count == 2
+
+
+@patch("toolchemy.ai.clients.ollama_client.Client")
+def test_completion_json_repairs_at_most_once_per_attempt(client_class_mock):
+    mock_client = client_class_mock.return_value
+    mock_client.generate.return_value = _OllamaClientGenerateResponse("broken json str")
+
+    client = OllamaClient(uri="http://uri", model_name="dummy-model", disable_cache=True,
+                          retry_min_wait=1, retry_attempts=2, fix_malformed_json=True)
+
+    with pytest.raises(RetryError):
+        _ = client.completion_json(prompt="test")
+
+    # each of the 2 attempts: the original call plus one repair call
+    assert mock_client.generate.call_count == 4

@@ -1,5 +1,6 @@
 import logging
 import json
+import re
 
 from jsonschema import validate, ValidationError
 from tenacity import wait_exponential, Retrying, stop_after_attempt
@@ -15,6 +16,9 @@ from toolchemy.utils.utils import ff, truncate
 from toolchemy.utils.cacher import Cacher, DummyCacher, ICacher
 from toolchemy.utils.at_exit_collector import ICollectable, AtExitCollector
 from toolchemy.ai.clients.pricing import Pricing
+
+# LLMs copy LaTeX such as `$\Phi$` into strings verbatim; `\P` is not a JSON escape and fails the whole parse
+_JSON_ESCAPE_OR_BACKSLASH = re.compile(r'(\\["\\/bfnrtu])|\\')
 
 
 class LLMCacheDoesNotExist(Exception):
@@ -403,8 +407,12 @@ Malformed JSON object:
     @staticmethod
     def _decode_json(json_str: str) -> dict | list[dict]:
         try:
-            content = json.loads(json_str)
-            return content
+            return json.loads(json_str)
+        except JSONDecodeError:
+            pass
+
+        try:
+            return json.loads(_JSON_ESCAPE_OR_BACKSLASH.sub(lambda m: m.group(1) or r"\\", json_str))
         except JSONDecodeError:
             pass
 

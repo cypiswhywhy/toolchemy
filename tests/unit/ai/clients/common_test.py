@@ -149,3 +149,15 @@ def test_model_config_uses_the_default_model_name_it_is_given():
 
     assert client.model_config(default_model_name="model-B").model_name == "model-B"
     assert client.name() == "model-A"
+
+
+def test_decode_json_keeps_latex_backslash_that_is_not_a_json_escape():
+    response = '{\n    "summary": "Researchers introduced $\\Phi$-Bench",\n    "tags": ["LLM"]\n}'
+
+    assert LLMClientBase._decode_json(response) == {"summary": "Researchers introduced $\\Phi$-Bench", "tags": ["LLM"]}
+
+
+def test_decode_json_keeps_valid_escapes():
+    response = r'{"text": "a\"b\\c\ndą \\Phi"}'
+
+    assert LLMClientBase._decode_json(response) == {"text": "a\"b\\c\ndą \\Phi"}
